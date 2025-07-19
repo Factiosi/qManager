@@ -82,70 +82,54 @@ def split_pdf_by_green_pages(input_pdf, output_dir, poppler_path=None, threshold
     :param log_callback: callable | None
     :param progress_callback: callable | None
     """
-    def log(message):
-        # Если есть callback - используем его, если нет - логируем через logging
-        if log_callback:
-            log_callback(message)
-        else:
-            logger.info(message)
-
+    if log_callback:
+        log_callback("Начата операция разделения")
     os.makedirs(output_dir, exist_ok=True)
     reader = PdfReader(input_pdf)
     total_pages = len(reader.pages)
-
     if progress_callback:
         progress_callback(0, total_pages)
-
     page_info = []
-    log("Анализ страниц...")
-    
     for i in range(total_pages):
-        if progress_callback:
-            progress_callback(i + 1, total_pages)
-
         image = extract_page_as_image(input_pdf, i, poppler_path)
         if image is None:
-            log(f"Не удалось обработать страницу {i+1}")
-            page_info.append((False, None))
             continue
-
         avg_rgb = get_average_color_rgb(image)
         is_green = is_greenish_hue(avg_rgb, threshold)
         page_info.append((is_green, i))
         del image
-        
-        log(f"Страница {i+1}: {'зеленая' if is_green else 'обычная'}")
-
-    log("Создание файлов...")
+        page_type = "АКФК" if is_green else "иной документ"
+        if log_callback:
+            log_callback(f"Сканирование страницы {i+1} ({page_type})")
+        if progress_callback:
+            progress_callback(i + 1, total_pages)
     writer = None
     file_index = 1
-    
+    saved_files = 0
     for i, (is_green, page_num) in enumerate(page_info):
         if page_num is None:
             continue
-        
         if is_green:
             if writer:
                 output_path = os.path.join(output_dir, f"output_{file_index}.pdf")
                 with open(output_path, "wb") as f:
                     writer.write(f)
-                log(f"Создан файл: {output_path}")
+                saved_files += 1
                 file_index += 1
-
             writer = PdfWriter()
             writer.add_page(reader.pages[page_num])
         else:
             if writer is None:
                 writer = PdfWriter()
             writer.add_page(reader.pages[page_num])
-
     if writer:
         output_path = os.path.join(output_dir, f"output_{file_index}.pdf")
         with open(output_path, "wb") as f:
             writer.write(f)
-        log(f"Создан последний файл: {output_path}")
-
-    log("Разделение завершено")
+        saved_files += 1
+    if log_callback:
+        log_callback("Операция завершена")
+        log_callback(f"Всего файлов сохранено: {saved_files}")
 
 def get_poppler_path():
     """

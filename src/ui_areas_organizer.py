@@ -118,14 +118,13 @@ class OrganizerArea(QWidget):
                 from src.utils_data_manager import DataManager
                 data_manager = DataManager(mode=excel_mode)
                 data_manager.load_excel_data(excel_path)
-                # Передайте data_manager дальше по логике, если требуется
                 organize_pdfs(
                     input_folder,
                     output_folder,
                     excel_path,
                     log_callback,
                     progress_callback,
-                    excel_mode=excel_mode
+                    mode=excel_mode
                 )
             except Exception as e:
                 log_callback(f"Ошибка при организации PDF: {e}")

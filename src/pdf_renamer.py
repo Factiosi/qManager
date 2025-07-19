@@ -158,7 +158,7 @@ def get_unique_filename(base_path, original_name):
     
     return new_name
 
-def process_pdfs(input_folder, output_folder, excel_path=None, log_callback=None, progress_callback=None):
+def process_pdfs(input_folder, output_folder, excel_path=None, log_callback=None, progress_callback=None, mode="logos"):
     """
     Переименовывает PDF файлы на основе найденных номеров контейнеров
     
@@ -172,73 +172,61 @@ def process_pdfs(input_folder, output_folder, excel_path=None, log_callback=None
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    data_manager = DataManager()
+    if log_callback:
+        log_callback("Начата операция переименования")
+
+    data_manager = DataManager(mode=mode)
     poppler_path = get_poppler_path()
 
     if excel_path and os.path.exists(excel_path):
         if log_callback:
-            log_callback(f"Загрузка данных из Excel: {excel_path}")
+            log_callback("Чтение файла Excel...")
         try:
-            data_manager.load_excel_data(excel_path)
+            stats = data_manager.load_excel_data(excel_path)
             if log_callback:
-                log_callback("Данные из Excel успешно загружены")
+                log_callback(f"Всего строк в файле: {stats['total_rows']}")
+                if stats['valid_rows_range'][0] and stats['valid_rows_range'][1]:
+                    log_callback(f"Валидные строки: {stats['valid_rows_range'][0]}–{stats['valid_rows_range'][1]}")
+                log_callback(f"Валидных конейтнеров: {stats['valid_containers']}")
         except Exception as e:
             if log_callback:
-                log_callback(f"Ошибка при загрузке Excel: {e}")
+                log_callback(f"Ошибка при чтении Excel: {e}")
             return
     else:
         if log_callback:
             log_callback("Не указан путь к Excel-файлу или файл не найден. Операция прервана.")
         return
 
-    valid_containers = set(data_manager.latest_container_data.keys())
-    if log_callback:
-        log_callback(f"Загружено {len(valid_containers)} валидных контейнеров")
-
     pdf_files = [f for f in os.listdir(input_folder) if f.lower().endswith(".pdf")]
     total_files = len(pdf_files)
     not_renamed_files = []
-    
     for index, filename in enumerate(pdf_files, 1):
         file_path = os.path.join(input_folder, filename)
         if log_callback:
-            log_callback(f"Обрабатывается: {filename}")
-        
+            log_callback(f"Чтение файла {os.path.splitext(filename)[0]}")
         try:
             text = extract_text_from_first_page(file_path, poppler_path)
             if text:
-                container_numbers = extract_container_numbers(text, valid_containers)
+                container_numbers = extract_container_numbers(text, set(data_manager.latest_container_data.keys()))
                 if container_numbers:
                     new_name = f"{', '.join(container_numbers)}.pdf"
                     new_name = get_unique_filename(output_folder, new_name)
                     new_path = os.path.join(output_folder, new_name)
                     os.rename(file_path, new_path)
                     if log_callback:
-                        log_callback(f"Файл переименован: {new_name}")
+                        log_callback(f"Файл переименован в {os.path.splitext(new_name)[0]}")
                 else:
                     new_name = get_unique_filename(output_folder, filename)
                     new_path = os.path.join(output_folder, new_name)
                     os.rename(file_path, new_path)
-                    if log_callback:
-                        log_callback(f"Файл перемещен без переименования: {new_name}")
-                    not_renamed_files.append(filename)
+                    not_renamed_files.append(os.path.splitext(filename)[0])
             else:
-                if log_callback:
-                    log_callback(f"Не удалось извлечь текст из файла {filename}")
-                not_renamed_files.append(filename)
-        except Exception as e:
-            if log_callback:
-                log_callback(f"Ошибка обработки файла {filename}: {e}")
-            not_renamed_files.append(filename)
-        
+                not_renamed_files.append(os.path.splitext(filename)[0])
+        except Exception:
+            not_renamed_files.append(os.path.splitext(filename)[0])
         if progress_callback:
             progress_callback(index, total_files)
-    
     if log_callback:
-        log_callback("Операция переименования PDF завершена")
+        log_callback("Операция завершена")
         if not_renamed_files:
-            log_callback(f"Не удалось переименовать {len(not_renamed_files)} файлов из {total_files}:")
-            for filename in not_renamed_files:
-                log_callback(f"- {filename}")
-        else:
-            log_callback("Все файлы успешно переименованы")
+            log_callback("Файлы, который не удалось переименовать:\n" + "\n".join(not_renamed_files))

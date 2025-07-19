@@ -18,7 +18,6 @@ class RenamerArea(QWidget):
         self.mode_combo = QComboBox()
         self.mode_combo.addItems(["Logos", "Отчёт"])
         self.mode_combo.setObjectName("excelModeCombo")
-        self.mode_combo.setStyleSheet(self.main_window.style().standardPalette().color(self.main_window.backgroundRole()).name())
         # Стилизация через ui_styles
         try:
             from src.ui_styles import COMBO_BOX_STYLE
@@ -112,14 +111,13 @@ class RenamerArea(QWidget):
                 from src.utils_data_manager import DataManager
                 data_manager = DataManager(mode=excel_mode)
                 data_manager.load_excel_data(excel_path)
-                # Передайте data_manager дальше по логике, если требуется
                 process_pdfs(
                     input_folder=input_dir,
                     output_folder=output_dir,
                     excel_path=excel_path,
                     log_callback=log_callback,
                     progress_callback=progress_callback,
-                    excel_mode=excel_mode
+                    mode=excel_mode
                 )
             except Exception as e:
                 log_callback(f"Ошибка при переименовании PDF: {e}")

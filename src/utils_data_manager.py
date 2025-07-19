@@ -26,14 +26,6 @@ class DataManager:
         self.latest_container_data = {}
         self.containers_by_unit = {}
 
-    def _log(self, message):
-        """
-        Внутренняя функция логирования.
-        Аргументы:
-            message (str): Сообщение для вывода в лог.
-        """
-        print(f"[LOG] {message}")
-
     def _find_column_index(self, columns, possible_names):
         """
         Поиск индекса столбца по возможным вариантам названия.
@@ -61,7 +53,9 @@ class DataManager:
             "%d.%m.%Y",
             "%Y-%m-%d",
             "%d/%m/%Y",
-            "%m/%d/%Y"
+            "%m/%d/%Y",
+            "%Y-%m-%d %H:%M:%S",  # поддержка формата с временем
+            "%d.%m.%Y %H:%M:%S"
         ]
         for fmt in formats:
             try:
@@ -87,19 +81,15 @@ class DataManager:
 
     def load_excel_data(self, excel_path):
         """
-        Загружает и обрабатывает данные контейнеров из Excel-файла. Извлекаются только необходимые столбцы.
+        Загружает и обрабатывает данные контейнеров из Excel-файла. Возвращает подробную статистику для пользовательских логов.
         Аргументы:
             excel_path (str): Путь к Excel-файлу.
-        Исключения:
-            ValueError: Если не найден хотя бы один обязательный столбец.
-            Exception: Критические ошибки при обработке файла.
+        Возвращает:
+            dict: {'total_rows': int, 'valid_rows_range': (int, int), 'valid_containers': int}
         """
-        self._log(f"Загрузка Excel файла: {excel_path} (режим: {self.mode})")
         try:
             with pd.ExcelFile(excel_path) as excel_file:
                 df = pd.read_excel(excel_file)
-                self._log(f"Прочитано строк: {len(df)}")
-                self._log(f"Колонки в файле: {df.columns.tolist()}")
                 columns = df.columns.tolist()
                 column_indices = {}
                 if self.mode == "report":
@@ -109,34 +99,49 @@ class DataManager:
                 for key, possible_names in mappings.items():
                     idx = self._find_column_index(columns, possible_names)
                     if idx is None:
-                        self._log(f"ОШИБКА: Не найден столбец для {key}. Возможные имена: {possible_names}")
                         raise ValueError(f"Не найден столбец для {key}. Возможные имена: {possible_names}")
                     column_indices[key] = idx
-                    self._log(f"Найден столбец {key}: {columns[idx]}")
                 processed_rows = 0
                 valid_containers = 0
                 containers_data = {}
-                # --- Фильтрация и порядок строк для режима 'report' ---
+                valid_start = None
+                valid_end = None
                 if self.mode == "report":
                     now = datetime.now()
                     max_age = timedelta(days=40)
-                    rows = list(df.iterrows())[::-1]  # С конца
+                    rows = list(df.iterrows())[::-1]
+                    start_idx = None
+                    for i, row in enumerate(rows):
+                        date_val = row[1][columns[column_indices['date']]]
+                        if pd.isna(date_val) or not str(date_val).strip():
+                            continue
+                        date_obj = self._parse_date(date_val)
+                        if date_obj and (now - date_obj) <= max_age:
+                            start_idx = i
+                            break
+                    if start_idx is not None:
+                        rows = rows[start_idx:]
+                        valid_start = rows[0][0]+1
+                    else:
+                        rows = []
                 else:
                     rows = list(df.iterrows())
+                    if rows:
+                        valid_start = rows[0][0]+1
+                if rows:
+                    valid_end = rows[0][0]+1 if self.mode=="report" else rows[-1][0]+1
                 for idx, row in rows:
                     try:
                         container_full = str(row[columns[column_indices['container']]]).strip()
                         if not container_full or pd.isna(container_full):
                             continue
-                        # Для режима 'report' — фильтрация по дате прибытия
                         if self.mode == "report":
                             date_val = row[columns[column_indices['date']]]
                             if pd.isna(date_val) or not str(date_val).strip():
-                                continue
+                                break
                             date_obj = self._parse_date(date_val)
                             if not date_obj or (now - date_obj) > max_age:
-                                continue
-                        # Извлекаем последние 7 цифр номера контейнера
+                                break
                         digits = ''.join(c for c in container_full if c.isdigit())
                         if len(digits) < 7:
                             continue
@@ -162,19 +167,18 @@ class DataManager:
                         containers_data[container_suffix].append(data_row)
                         valid_containers += 1
                         processed_rows += 1
-                    except Exception as e:
-                        self._log(f"Ошибка при обработке строки {idx + 1}: {str(e)}")
-                # Сохраняем последние данные по контейнерам (ключ — полный номер контейнера)
+                    except Exception:
+                        continue
                 self.latest_container_data.clear()
                 for container_suffix, container_list in containers_data.items():
                     for data_row in container_list:
                         self.latest_container_data[data_row["container"]] = data_row
-                self._log(f"\nИтоги обработки:")
-                self._log(f"Всего обработано строк: {processed_rows}")
-                self._log(f"Найдено валидных контейнеров: {valid_containers}")
-                self._log(f"Уникальных контейнеров: {len(self.latest_container_data)}")
+                return {
+                    'total_rows': len(df),
+                    'valid_rows_range': (valid_start, valid_end),
+                    'valid_containers': valid_containers
+                }
         except Exception as e:
-            self._log(f"Критическая ошибка при обработке файла: {str(e)}")
             raise
 
     def process_data(self):
@@ -193,7 +197,7 @@ class DataManager:
                 if container not in self.containers_by_unit[unit]:
                     self.containers_by_unit[unit].append(container)
             except Exception as e:
-                self._log(f"Ошибка при обработке контейнера {container}: {e}")
+                continue
 
     def get_container_data(self, container):
         """
