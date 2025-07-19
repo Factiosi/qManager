@@ -1,0 +1,27 @@
+# Автоматическое определение текстовых файлов и выполнение нормализации LF
+* text=auto
+# Python файлы всегда должны использовать LF
+*.py text eol=lf
+*.pyw text eol=lf
+*.pyx text eol=lf
+*.pxd text eol=lf
+*.pxi text eol=lf
+# Файлы документации
+*.md text eol=lf
+*.txt text eol=lf
+*.rst text eol=lf
+# Файлы конфигурации
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.ini text eol=lf
+# Бинарные файлы (не должны модифицироваться)
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.dll filter=lfs diff=lfs merge=lfs -text
+*.exe filter=lfs diff=lfs merge=lfs -text
+*.pdf binary
+vendor/**/*.traineddata filter=lfs diff=lfs merge=lfs -text

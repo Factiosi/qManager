@@ -1,0 +1,13 @@
+PySide6
+PyPDF2
+Pillow
+numpy
+pdf2image
+pytesseract
+nuitka
+reportlab
+gspread
+oauth2client
+opencv-python-headless
+pandas
+openpyxl

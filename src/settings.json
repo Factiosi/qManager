@@ -1,0 +1,15 @@
+{
+    "version": "1.0.0",
+    "app_name": "qManager",
+    "company": "GT",
+    "default_language": "ru",
+    "window": {
+        "title": "qManager",
+        "min_width": 800,
+        "min_height": 600
+    },
+    "paths": {
+        "vendor": "vendor",
+        "resources": "src/resources"
+    }
+} 
