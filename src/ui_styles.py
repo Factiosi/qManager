@@ -1,494 +1,410 @@
-﻿"""
-Модуль стилей для пользовательского интерфейса.
-Содержит определения стилей для различных элементов интерфейса.
-"""
+"""Модуль стилей для интерфейса"""
 
 # Глобальные настройки темы
 DARK_MODE = False
 
+def get_colors():
+    """Возвращает текущую цветовую схему"""
+    return DARK_COLORS if DARK_MODE else LIGHT_COLORS
+
+def toggle_dark_mode():
+    """Переключает темную тему"""
+    global DARK_MODE
+    DARK_MODE = not DARK_MODE
+    return DARK_MODE
+
 # Определение цветовых схем для светлой и темной тем
 LIGHT_COLORS = {
-    "bg_color": "#FFFFFF",  # Белый фон
-    "widget_bg": "#FFFFFF",  # Белый фон виджетов
-    "text_color": "#212121",  # Тёмно-серый текст
-    "border_color": "#E0E0E0",  # Светло-серые границы
-    "accent_color": "#2196F3",  # Синий акцент
-    "tab_inactive_bg": "#F5F5F5",  # Светло-серый фон неактивных вкладок
-    "tab_inactive_hover_bg": "#EEEEEE",  # Серый фон при наведении на неактивные вкладки
-    "scrollbar_bg": "#F5F5F5",  # Светло-серый фон скроллбара
-    "scrollbar_handle": "#BDBDBD"  # Серый цвет ползунка скроллбара
+    "bg_color": "#F5F6F8",
+    "widget_bg": "#FFFFFF",
+    "text_color": "#1F2937",
+    "border_color": "#D1D5DB",
+    "accent_color": "#1D9BF0",
+    "accent_color_hover": "#187CC0",
+
+    "error_color": "#DC2626",
+    "success_color": "#16A34A",
+    "warning_color": "#F59E0B",
+    "disabled_bg": "#EEF0F3",
+    "disabled_text": "#9CA3AF",
+
+    "tab_active_bg": "#E6F0FA",
+    "tab_active_border": "#1D9BF0",
+    "tab_inactive_bg": "#FFFFFF",
+    "tab_inactive_hover_bg": "#E9EEF5",
+
+    "menu_bg": "#FFFFFF",
+    "menu_text": "#1F2937",
+    "menu_hover_bg": "#EEF2F7",
+
+    "statusbar_bg": "#F5F6F8",
+    "scrollbar_bg": "#F0F2F5",
+    "scrollbar_handle": "#C7CDD6",
+    "shadow_color": "#00000022",
+    "console_bg": "#F9FAFB",
+    "console_text": "#111827",
+    "console_system": "#6B7280",
+    "console_error": "#DC2626",
+    "console_warn": "#D97706",
+    "console_success": "#15803D"
 }
 
 DARK_COLORS = {
-    "bg_color": "#1E1E1E",  # Тёмно-серый фон
-    "widget_bg": "#2D2D2D",  # Тёмно-серый фон виджетов
-    "text_color": "#FFFFFF",  # Белый текст
-    "border_color": "#404040",  # Тёмно-серые границы
-    "accent_color": "#2196F3",  # Синий акцент
-    "tab_inactive_bg": "#252525",  # Тёмно-серый фон неактивных вкладок
-    "tab_inactive_hover_bg": "#303030",  # Тёмно-серый фон при наведении на неактивные вкладки
-    "scrollbar_bg": "#252525",  # Тёмно-серый фон скроллбара
-    "scrollbar_handle": "#404040"  # Тёмно-серый цвет ползунка скроллбара
+    "bg_color": "#1E1E2E",
+    "widget_bg": "#2A2A3C",
+    "text_color": "#F9FAFB",
+    "border_color": "#3B3B4F",
+    "accent_color": "#3B82F6",
+    "accent_color_hover": "#2563EB",
+
+    "error_color": "#F87171",
+    "success_color": "#34D399",
+    "warning_color": "#FBBF24",
+    "disabled_bg": "#333345",
+    "disabled_text": "#9CA3AF",
+
+    "tab_active_bg": "#273849",
+    "tab_active_border": "#3B82F6",
+    "tab_inactive_bg": "#2A2A3C",
+    "tab_inactive_hover_bg": "#323248",
+
+    "menu_bg": "#2A2A3C",
+    "menu_text": "#F9FAFB",
+    "menu_hover_bg": "#33334A",
+
+    "statusbar_bg": "#2A2A3C",
+    "scrollbar_bg": "#26263A",
+    "scrollbar_handle": "#3F3F56",
+    "shadow_color": "#00000066",
+    "console_bg": "#1E1E1E",
+    "console_text": "#D1D5DB",
+    "console_system": "#9CA3AF",
+    "console_error": "#F87171",
+    "console_warn": "#FBBF24",
+    "console_success": "#4ADE80"
 }
 
-# Основные цвета
-PRIMARY_COLOR = "#2196F3"  # Синий
-SECONDARY_COLOR = "#FFC107"  # Жёлтый
-SUCCESS_COLOR = "#4CAF50"  # Зелёный
-ERROR_COLOR = "#F44336"  # Красный
-WARNING_COLOR = "#FF9800"  # Оранжевый
-INFO_COLOR = "#00BCD4"  # Голубой
-
-# Цвета фона
-BACKGROUND_COLOR = "#FFFFFF"  # Белый
-SURFACE_COLOR = "#F5F5F5"  # Светло-серый
-CARD_COLOR = "#FFFFFF"  # Белый
-
-# Цвета текста
-TEXT_PRIMARY = "#212121"  # Тёмно-серый
-TEXT_SECONDARY = "#757575"  # Серый
-TEXT_DISABLED = "#9E9E9E"  # Светло-серый
-
-# Цвета границ
-BORDER_COLOR = "#E0E0E0"  # Светло-серый
-DIVIDER_COLOR = "#BDBDBD"  # Серый
-
-# Размеры
+# Параметры стиля
 BORDER_RADIUS = "4px"
+LARGE_BORDER_RADIUS = "8px"
 PADDING = "8px"
 MARGIN = "8px"
 
-# Стили для кнопок
-BUTTON_STYLE = f"""
-    QPushButton {{
-        background-color: {PRIMARY_COLOR};
-        color: white;
-        border: none;
-        border-radius: {BORDER_RADIUS};
-        padding: {PADDING};
-        margin: {MARGIN};
-    }}
-    QPushButton:hover {{
-        background-color: {PRIMARY_COLOR}dd;
-    }}
-    QPushButton:pressed {{
-        background-color: {PRIMARY_COLOR}aa;
-    }}
-    QPushButton:disabled {{
-        background-color: {TEXT_DISABLED};
-    }}
-"""
-
-# Стили для полей ввода
-INPUT_STYLE = f"""
-    QLineEdit {{
-        background-color: {SURFACE_COLOR};
-        color: {TEXT_PRIMARY};
-        border: 1px solid {BORDER_COLOR};
-        border-radius: {BORDER_RADIUS};
-        padding: {PADDING};
-        margin: {MARGIN};
-    }}
-    QLineEdit:focus {{
-        border: 1px solid {PRIMARY_COLOR};
-    }}
-    QLineEdit:disabled {{
-        background-color: {TEXT_DISABLED}22;
-        color: {TEXT_DISABLED};
-    }}
-"""
-
-# Стили для меток
-LABEL_STYLE = f"""
-    QLabel {{
-        color: {TEXT_PRIMARY};
-        margin: {MARGIN};
-    }}
-"""
-
-# Стили для групп
-GROUP_STYLE = f"""
-    QGroupBox {{
-        background-color: {CARD_COLOR};
-        border: 1px solid {BORDER_COLOR};
-        border-radius: {BORDER_RADIUS};
-        margin-top: 1em;
-        padding: {PADDING};
-    }}
-    QGroupBox::title {{
-        color: {TEXT_PRIMARY};
-        subcontrol-origin: margin;
-        left: {PADDING};
-        padding: 0 3px;
-    }}
-"""
-
-# Стили для прогресс-бара
-PROGRESS_BAR_STYLE = f"""
-    QProgressBar {{
-        border: 1px solid {BORDER_COLOR};
-        border-radius: {BORDER_RADIUS};
-        text-align: center;
-        background-color: {SURFACE_COLOR};
-    }}
-    QProgressBar::chunk {{
-        background-color: {PRIMARY_COLOR};
-        border-radius: {BORDER_RADIUS};
-    }}
-"""
-
-# Стили для выпадающих списков
-COMBO_BOX_STYLE = f"""
-    QComboBox {{
-        background-color: #e9eef5; /* чуть темнее, чем {SURFACE_COLOR} */
-        color: {TEXT_PRIMARY};
-        border: 1px solid {BORDER_COLOR};
-        border-radius: {BORDER_RADIUS};
-        padding: {PADDING};
-        margin: {MARGIN};
-    }}
-    QComboBox:hover {{
-        border: 1px solid {PRIMARY_COLOR};
-    }}
-    QComboBox::drop-down {{
-        border: none;
-    }}
-    QComboBox::down-arrow {{
-        width: 12px;
-        height: 12px;
-    }}
-    QComboBox:disabled {{
-        background-color: {TEXT_DISABLED}22;
-        color: {TEXT_DISABLED};
-    }}
-    QComboBox QAbstractItemView {{
-        background: #e0e6ee; /* ещё чуть темнее */
-        color: {TEXT_PRIMARY};
-        border: 1px solid {PRIMARY_COLOR};
-        selection-background-color: #c2d3ee; /* яркая подсветка выбранного */
-        selection-color: {PRIMARY_COLOR};
-        outline: none;
-    }}
-    QComboBox QAbstractItemView::item:hover {{
-        background: #b3c9e6; /* ещё более заметная подсветка при наведении */
-        color: {PRIMARY_COLOR};
-    }}
-"""
-
-# Стили для спинбоксов
-SPIN_BOX_STYLE = f"""
-    QSpinBox, QDoubleSpinBox {{
-        background-color: {SURFACE_COLOR};
-        color: {TEXT_PRIMARY};
-        border: 1px solid {BORDER_COLOR};
-        border-radius: {BORDER_RADIUS};
-        padding: {PADDING};
-        margin: {MARGIN};
-    }}
-    QSpinBox:hover, QDoubleSpinBox:hover {{
-        border: 1px solid {PRIMARY_COLOR};
-    }}
-    QSpinBox:disabled, QDoubleSpinBox:disabled {{
-        background-color: {TEXT_DISABLED}22;
-        color: {TEXT_DISABLED};
-    }}
-"""
-
-# Стили для главного окна
-MAIN_WINDOW_STYLE = f"""
+def get_stylesheet(dark_mode=False):
+    """Возвращает таблицу стилей для приложения"""
+    global DARK_MODE
+    DARK_MODE = dark_mode
+    colors = get_colors()
+    
+    return f"""
+    /* Главное окно */
     QMainWindow {{
-        background-color: {BACKGROUND_COLOR};
+        background-color: {colors['bg_color']};
+        color: {colors['text_color']};
     }}
-"""
-
-# Стили для вкладок
-TAB_WIDGET_STYLE = f"""
+    
+    /* Меню */
+    QMenuBar {{
+        background-color: {colors['menu_bg']};
+        color: {colors['menu_text']};
+        border-bottom: 1px solid {colors['border_color']};
+    }}
+    
+    QMenuBar::item:selected {{
+        background-color: {colors['menu_hover_bg']};
+    }}
+    
+    QMenu {{
+        background-color: {colors['menu_bg']};
+        color: {colors['menu_text']};
+        border: 1px solid {colors['border_color']};
+    }}
+    
+    QMenu::item:selected {{
+        background-color: {colors['menu_hover_bg']};
+    }}
+    
+    /* Вкладки */
     QTabWidget::pane {{
-        border: 1px solid {BORDER_COLOR};
+        border: 1px solid {colors['border_color']};
+        background-color: {colors['widget_bg']};
         border-radius: {BORDER_RADIUS};
-        background-color: {CARD_COLOR};
+        padding-top: 0;
     }}
+    
     QTabBar::tab {{
-        background-color: {SURFACE_COLOR};
-        color: {TEXT_PRIMARY};
-        border: 1px solid {BORDER_COLOR};
+        background-color: {colors['tab_inactive_bg']};
+        color: {colors['text_color']};
+        padding: 8px 16px;
+        border: 1px solid {colors['border_color']};
         border-bottom: none;
         border-top-left-radius: {BORDER_RADIUS};
         border-top-right-radius: {BORDER_RADIUS};
-        padding: {PADDING};
-        margin-right: 2px;
+        margin: 0 2px 0 0;
     }}
+    
     QTabBar::tab:selected {{
-        background-color: {CARD_COLOR};
-        border-bottom: 1px solid {CARD_COLOR};
+        background-color: {colors['tab_active_bg']};
+        border-bottom: 2px solid {colors['tab_active_border']};
+        margin-bottom: 0;
     }}
-    QTabBar::tab:hover {{
-        background-color: {PRIMARY_COLOR}22;
+    
+    QTabBar::tab:hover:!selected {{
+        background-color: {colors['tab_inactive_hover_bg']};
     }}
-"""
-
-# Стили для сообщений
-MESSAGE_BOX_STYLE = f"""
-    QMessageBox {{
-        background-color: {CARD_COLOR};
+    
+    /* Кнопки */
+    QPushButton {{
+        background-color: {colors['accent_color']};
+        color: white;
+        border: none;
+        border-radius: {BORDER_RADIUS};
+        padding: 4px;
+        font-weight: 600;
+        text-align: center;
+        spacing: 4px;
     }}
-    QMessageBox QLabel {{
-        color: {TEXT_PRIMARY};
+    
+    QPushButton:hover {{
+        background-color: {colors['accent_color_hover']};
     }}
-    QMessageBox QPushButton {{
-        {BUTTON_STYLE}
+    
+    QPushButton:pressed {{
+        background-color: {colors['accent_color_hover']};
+        margin: 1px 0 0 1px;
     }}
-"""
-
-# Стили для диалогов
-DIALOG_STYLE = f"""
-    QDialog {{
-        background-color: {CARD_COLOR};
+    
+    QPushButton[iconOnly="true"] {{
+        padding: 0px;
     }}
-    QDialog QLabel {{
-        color: {TEXT_PRIMARY};
+    
+    QPushButton:disabled {{
+        background-color: {colors['disabled_bg']};
+        color: {colors['disabled_text']};
     }}
-    QDialog QPushButton {{
-        {BUTTON_STYLE}
+    
+    QPushButton[small="true"] {{
+        padding: 4px 8px;
+        font-size: 12px;
     }}
-"""
-
-# Стили для меню
-MENU_STYLE = f"""
-    QMenuBar {{
-        background-color: {SURFACE_COLOR};
-        color: {TEXT_PRIMARY};
-    }}
-    QMenuBar::item:selected {{
-        background-color: {PRIMARY_COLOR}22;
-    }}
-    QMenu {{
-        background-color: {CARD_COLOR};
-        border: 1px solid {BORDER_COLOR};
-    }}
-    QMenu::item {{
-        color: {TEXT_PRIMARY};
+    
+    /* Поля ввода */
+    QLineEdit {{
+        background-color: {colors['widget_bg']};
+        color: {colors['text_color']};
+        border: 1px solid {colors['border_color']};
+        border-radius: {BORDER_RADIUS};
         padding: {PADDING};
     }}
-    QMenu::item:selected {{
-        background-color: {PRIMARY_COLOR}22;
+    
+    QLineEdit:focus {{
+        border: 1px solid {colors['accent_color']};
     }}
-"""
-
-# Стили для статусной строки
-STATUS_BAR_STYLE = f"""
-    QStatusBar {{
-        background-color: {SURFACE_COLOR};
-        color: {TEXT_PRIMARY};
+    
+    QLineEdit:disabled {{
+        background-color: {colors['disabled_bg']};
+        color: {colors['disabled_text']};
     }}
-"""
-
-# Стили для скроллбара
-SCROLL_BAR_STYLE = f"""
-    QScrollBar:vertical {{
+    
+    /* Выпадающие списки */
+    QComboBox {{
+        background-color: {colors['widget_bg']};
+        color: {colors['text_color']};
+        border: 1px solid {colors['border_color']};
+        border-radius: {BORDER_RADIUS};
+        padding: {PADDING};
+        min-height: 0;
+        font-size: 13px;
+    }}
+    
+    QComboBox:hover {{
+        border: 1px solid {colors['accent_color']};
+    }}
+    
+    QComboBox::drop-down {{
         border: none;
-        background-color: {SURFACE_COLOR};
-        width: 10px;
-        margin: 0px;
+        width: 20px;
     }}
-    QScrollBar::handle:vertical {{
-        background-color: {TEXT_DISABLED};
-        border-radius: 5px;
-        min-height: 20px;
+    QComboBox QAbstractItemView {{
+        background-color: {colors['widget_bg']};
+        color: {colors['text_color']};
+        border: 1px solid {colors['border_color']};
+        outline: 0;
     }}
-    QScrollBar::handle:vertical:hover {{
-        background-color: {TEXT_SECONDARY};
+    QComboBox QAbstractItemView::item {{
+        min-height: 28px;
+        padding: 6px 10px;
+        font-size: 14px;
     }}
-    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-        height: 0px;
+    QComboBox QAbstractItemView::item:selected {{
+        background: {colors['tab_inactive_hover_bg']};
+        color: {colors['text_color']};
     }}
-    QScrollBar:horizontal {{
-        border: none;
-        background-color: {SURFACE_COLOR};
-        height: 10px;
-        margin: 0px;
+    
+    /* Чекбоксы */
+    QCheckBox {{
+        color: {colors['text_color']};
+        spacing: 8px;
     }}
-    QScrollBar::handle:horizontal {{
-        background-color: {TEXT_DISABLED};
-        border-radius: 5px;
-        min-width: 20px;
+    
+    QCheckBox::indicator {{
+        width: 18px;
+        height: 18px;
+        border: 1px solid {colors['border_color']};
+        border-radius: 3px;
+        background-color: {colors['widget_bg']};
     }}
-    QScrollBar::handle:horizontal:hover {{
-        background-color: {TEXT_SECONDARY};
-    }}
-    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
-        width: 0px;
-    }}
-"""
 
-def get_stylesheet(dark_mode: bool) -> str:
-    """Возвращает QSS стиль для приложения"""
-    colors = DARK_COLORS if dark_mode else LIGHT_COLORS
-    
-    return f"""
-    QMainWindow {{
-        background-color: {colors["bg_color"]};
-        font-family: "Segoe UI", sans-serif;
+    QCheckBox::indicator:checked {{
+        background-color: {colors['accent_color']};
+        border-color: {colors['accent_color']};
     }}
     
-    QWidget {{
-        background-color: {colors["widget_bg"]};
-        color: {colors["text_color"]};
-        font-family: "Segoe UI", sans-serif;
+    QCheckBox::indicator:checked:hover {{
+        background-color: {colors['accent_color_hover']};
+        border-color: {colors['accent_color_hover']};
     }}
     
+    QCheckBox::indicator:hover {{
+        border-color: {colors['accent_color']};
+    }}
+    
+    /* Спинбоксы */
+    QSpinBox, QDoubleSpinBox {{
+        background-color: {colors['widget_bg']};
+        color: {colors['text_color']};
+        border: 1px solid {colors['border_color']};
+        border-radius: {BORDER_RADIUS};
+        padding: 4px;
+    }}
+    
+    QSpinBox:focus, QDoubleSpinBox:focus {{
+        border: 1px solid {colors['accent_color']};
+    }}
+    
+    /* Группы */
     QGroupBox {{
-        border: 1px solid {colors["border_color"]};
-        border-radius: 8px;
+        border: 1px solid {colors['border_color']};
+        border-radius: {BORDER_RADIUS};
         margin-top: 1.5em;
-        padding: 8px;
-        background-color: {colors["widget_bg"]};
+        padding: {PADDING};
     }}
     
     QGroupBox::title {{
         subcontrol-origin: margin;
-        left: 8px;
-        padding: 0 5px;
-        background-color: {colors["widget_bg"]};
+        subcontrol-position: top left;
+        padding: 0 {PADDING};
+        color: {colors['text_color']};
+        background-color: transparent;
     }}
     
-    QPushButton {{
-        background-color: {colors["accent_color"]};
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 8px 16px;
-        min-height: 20px;
-    }}
-    
-    QPushButton:hover {{
-        background-color: #005a9e;
-    }}
-    
-    QPushButton:pressed {{
-        background-color: #004578;
-    }}
-    
-    QLineEdit, QTextEdit {{
-        border: 1px solid {colors["border_color"]};
-        border-radius: 8px;
-        padding: 6px 8px;
-        background-color: {colors["widget_bg"]};
-        color: {colors["text_color"]};
-        selection-background-color: {colors["accent_color"]};
-        min-height: 20px;
-    }}
-    
+    /* Прогресс бар */
     QProgressBar {{
-        border: 1px solid {colors["border_color"]};
-        border-radius: 8px;
+        border: 1px solid {colors['border_color']};
+        border-radius: {BORDER_RADIUS};
+        background-color: {colors['bg_color']};
         text-align: center;
-        background-color: {colors["widget_bg"]};
-        color: {colors["text_color"]};
-        min-height: 20px;
-        padding: 1px;
+        color: {colors['text_color']};
     }}
     
     QProgressBar::chunk {{
-        background-color: {colors["accent_color"]};
-        border-radius: 6px;
-        margin: 2px;
+        background-color: {colors['accent_color']};
+        border-radius: {BORDER_RADIUS};
     }}
+
+    /* Панель управления (фон) */
+    QFrame#controlPanel {{
+        background-color: {colors['bg_color']};
+        border-top: 1px solid {colors['border_color']};
+        border-left: none;
+        border-right: none;
+        border-bottom: none;
+        border-radius: 0;
+        padding: 6px 8px; /* уменьшили вертикальные отступы */
+    }}
+
+    QLabel {{
+        color: {colors['text_color']};
+    }}
+
+    /* Псевдотерминал */
+    QPlainTextEdit#logView {{
+        background-color: {colors['console_bg']};
+        color: {colors['console_text']};
+        border: 1px solid {colors['border_color']};
+        border-radius: {BORDER_RADIUS};
+        min-height: 120px;
+    }}
+    QPlainTextEdit#logView .system {{ color: {colors['console_system']}; }}
+    QPlainTextEdit#logView .error {{ color: {colors['console_error']}; }}
+    QPlainTextEdit#logView .warn {{ color: {colors['console_warn']}; }}
+    QPlainTextEdit#logView .success {{ color: {colors['console_success']}; }}
     
-    QTabWidget {{
-        background: transparent;
+    /* Скроллбар для консоли - синий как у кнопок */
+    QPlainTextEdit#logView QScrollBar:vertical {{
         border: none;
+        background-color: {colors['scrollbar_bg']};
+        width: 10px;
+        margin: 0;
     }}
     
-    QTabWidget::pane {{
-        border: 1px solid {colors["border_color"]};
-        background: {colors["widget_bg"]};
-        border-bottom-left-radius: 8px;
-        border-bottom-right-radius: 8px;
-        margin: 0px;
-        top: -1px;
-    }}
-    
-    QTabBar::tab {{
-        background: {colors["tab_inactive_bg"]};
-        border: 1px solid {colors["border_color"]};
-        border-bottom: none;
-        padding: 8px 16px;
-        margin: 0px;
-        margin-right: 2px;
+    QPlainTextEdit#logView QScrollBar::handle:vertical {{
+        background-color: {colors['accent_color']};
         min-height: 20px;
-        min-width: 80px;
-        border-top-left-radius: 8px;
-        border-top-right-radius: 8px;
+        border-radius: 5px;
     }}
     
-    QTabBar::tab:selected {{
-        background: {colors["widget_bg"]};
-        color: {colors["text_color"]};
-        border: 1px solid {colors["accent_color"]};
-        border-bottom: none;
-        margin-bottom: -1px;
-        padding-bottom: 9px;
+    QPlainTextEdit#logView QScrollBar::handle:vertical:hover {{
+        background-color: {colors['accent_color_hover']};
     }}
     
-    QTabBar::tab:!selected {{
-        background: {colors["tab_inactive_bg"]};
-        color: {colors["text_color"]};
+    QPlainTextEdit#logView QScrollBar:horizontal {{
+        border: none;
+        background-color: {colors['scrollbar_bg']};
+        height: 10px;
+        margin: 0;
     }}
     
-    QTabBar::tab:hover:!selected {{
-        background: {colors["tab_inactive_hover_bg"]};
+    QPlainTextEdit#logView QScrollBar::handle:horizontal {{
+        background-color: {colors['accent_color']};
+        min-width: 20px;
+        border-radius: 5px;
     }}
     
+    QPlainTextEdit#logView QScrollBar::handle:horizontal:hover {{
+        background-color: {colors['accent_color_hover']};
+    }}
+    
+    /* Статус бар */
+    QStatusBar {{
+        background-color: {colors['statusbar_bg']};
+        color: {colors['text_color']};
+    }}
+    
+    /* Скроллбары */
     QScrollBar:vertical {{
         border: none;
-        background: {colors["scrollbar_bg"]};
-        width: 14px;
-        margin: 0px;
-        border-radius: 7px;
+        background-color: {colors['scrollbar_bg']};
+        width: 10px;
+        margin: 0;
     }}
     
     QScrollBar::handle:vertical {{
-        background: {colors["scrollbar_handle"]};
-        min-height: 30px;
-        border-radius: 7px;
-    }}
-    
-    QScrollBar::handle:vertical:hover {{
-        background: {colors["accent_color"]};
-    }}
-    
-    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-        height: 0px;
-    }}
-    
-    QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
-        background: none;
+        background-color: {colors['scrollbar_handle']};
+        min-height: 20px;
+        border-radius: 5px;
     }}
     
     QScrollBar:horizontal {{
         border: none;
-        background: {colors["scrollbar_bg"]};
-        height: 14px;
-        margin: 0px;
-        border-radius: 7px;
+        background-color: {colors['scrollbar_bg']};
+        height: 10px;
+        margin: 0;
     }}
     
     QScrollBar::handle:horizontal {{
-        background: {colors["scrollbar_handle"]};
-        min-width: 30px;
-        border-radius: 7px;
-    }}
-    
-    QScrollBar::handle:horizontal:hover {{
-        background: {colors["accent_color"]};
-    }}
-    
-    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
-        width: 0px;
-    }}
-    
-    QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {{
-        background: none;
+        background-color: {colors['scrollbar_handle']};
+        min-width: 20px;
+        border-radius: 5px;
     }}
     """

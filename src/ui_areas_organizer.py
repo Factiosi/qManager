@@ -1,6 +1,7 @@
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
-                              QLineEdit, QPushButton, QFormLayout,
-                              QGroupBox, QStyle, QComboBox)
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QFormLayout,
+    QGroupBox, QStyle
+)
 
 from src.pdf_organizer import organize_pdfs
 from src.core_worker import WorkerThread
@@ -13,130 +14,90 @@ class OrganizerArea(QWidget):
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(
+            self.main_window.MARGIN_NORMAL,
+            self.main_window.MARGIN_NORMAL,
+            self.main_window.MARGIN_NORMAL,
+            self.main_window.MARGIN_NORMAL,
+        )
 
-        # --- QComboBox для выбора режима Excel ---
-        self.mode_combo = QComboBox()
-        self.mode_combo.addItems(["Logos", "Отчёт"])
-        self.mode_combo.setObjectName("excelModeCombo")
-        try:
-            from src.ui_styles import COMBO_BOX_STYLE
-            self.mode_combo.setStyleSheet(COMBO_BOX_STYLE)
-        except Exception:
-            pass
-        mode_val = self.main_window.settings.get('excel_mode', 'logos')
-        self.mode_combo.setCurrentIndex(0 if mode_val == 'logos' else 1)
-        self.mode_combo.currentIndexChanged.connect(self.on_mode_changed)
-        layout.addWidget(self.mode_combo)
-
-        group = QGroupBox("PDF Organizer")
+        group = QGroupBox("Организация PDF")
         form_layout = QFormLayout()
+        form_layout.setContentsMargins(
+            self.main_window.MARGIN_NORMAL,
+            self.main_window.MARGIN_NORMAL,
+            self.main_window.MARGIN_NORMAL,
+            self.main_window.MARGIN_NORMAL,
+        )
 
-        # Выбор входной папки
-        self.input_field = QLineEdit()
-        self.input_field.setPlaceholderText("Выберите входную папку...")
+        input_container, self.input_field = self.main_window.create_browse_row(
+            "Выберите входную папку...",
+            file_mode=False
+        )
         self.input_field.setText(self.main_window.settings.get('organizer_input', ''))
-        input_btn = QPushButton("Обзор")
-        input_btn.setProperty("iconOnly", "true")
-        input_btn.setIcon(self.style().standardIcon(QStyle.SP_DirIcon))
-        input_btn.clicked.connect(
-            lambda: self.main_window.browse_directory(self.input_field))
-        input_layout = QHBoxLayout()
-        input_layout.addWidget(self.input_field)
-        input_layout.addWidget(input_btn)
-        form_layout.addRow("Входная папка:", input_layout)
+        form_layout.addRow("Входная папка:", input_container)
 
-        # Выбор выходной папки
-        self.output_field = QLineEdit()
-        self.output_field.setPlaceholderText("Выберите папку для сохранения...")
+        output_container, self.output_field = self.main_window.create_browse_row(
+            "Выберите папку для сохранения...",
+            file_mode=False
+        )
         self.output_field.setText(self.main_window.settings.get('organizer_output', ''))
-        output_btn = QPushButton("Обзор")
-        output_btn.setProperty("iconOnly", "true")
-        output_btn.setIcon(self.style().standardIcon(QStyle.SP_DirIcon))
-        output_btn.clicked.connect(
-            lambda: self.main_window.browse_directory(self.output_field))
-        output_layout = QHBoxLayout()
-        output_layout.addWidget(self.output_field)
-        output_layout.addWidget(output_btn)
-        form_layout.addRow("Выходная папка:", output_layout)
+        form_layout.addRow("Выходная папка:", output_container)
 
-        # Выбор Excel файла для организатора
-        self.excel_container = QWidget()
-        excel_layout = QHBoxLayout(self.excel_container)
-        excel_layout.setContentsMargins(0, 0, 0, 0)
-        self.excel_field = QLineEdit()
-        self.excel_field.setPlaceholderText("Выберите Excel файл...")
+        excel_container, self.excel_field = self.main_window.create_browse_row(
+            "Выберите Excel файл...",
+            file_mode=True,
+            file_filter="Excel Files (*.xlsx *.xls)"
+        )
         self.excel_field.setText(self.main_window.settings.get('organizer_excel_file', ''))
-        excel_btn = QPushButton("Обзор")
-        excel_btn.setProperty("iconOnly", "true")
-        excel_btn.setIcon(self.style().standardIcon(QStyle.SP_FileIcon))
-        excel_btn.clicked.connect(
-            lambda: self.main_window.browse_file(self.excel_field, "Excel Files (*.xlsx *.xls)"))
-        excel_layout.addWidget(self.excel_field)
-        excel_layout.addWidget(excel_btn)
-        form_layout.addRow("Excel файл:", self.excel_container)
-        self.excel_container.setVisible(True)
+        form_layout.addRow("Excel файл:", excel_container)
 
         group.setLayout(form_layout)
         layout.addWidget(group)
+        layout.addStretch()
 
-        # Кнопка организации
-        self.organize_btn = QPushButton("Организовать PDF")
-        self.organize_btn.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
-        self.organize_btn.clicked.connect(self.organize_pdf)
-        layout.addWidget(self.organize_btn)
-        self.main_window.start_buttons.append(self.organize_btn)
-
-        # Добавляем подсказки        self.input_field.setToolTip("Выберите папку с PDF файлами для организации")
+        
+        self.input_field.setToolTip("Выберите папку с PDF файлами для организации")
         self.output_field.setToolTip("Выберите папку для сохранения организованных файлов")
-        self.organize_btn.setToolTip("Начать процесс организации PDF файлов")
-
-    def on_mode_changed(self, idx):
-        mode = 'logos' if idx == 0 else 'report'
-        self.main_window.settings['excel_mode'] = mode
-        self.main_window.settings_manager.save_settings(self.main_window.settings)
-
-    def get_excel_mode(self):
-        idx = self.mode_combo.currentIndex()
-        return 'logos' if idx == 0 else 'report'
 
     def organize_pdf(self):
-        """
-        Начать процесс организации PDF файлов
-        """
-        self.main_window.cleanup_worker()
-        
+        """Начать процесс организации"""
         if not self.check_inputs():
             return
             
         input_folder = self.input_field.text()
         output_folder = self.output_field.text()
         excel_path = self.excel_field.text()
-        excel_mode = self.get_excel_mode()
+        excel_mode = self.main_window.settings.get('excel_mode', 'logos')
+
+        # Останавливаем предыдущий worker если он запущен
+        if self.main_window.worker and self.main_window.worker.isRunning():
+            self.main_window.stop_worker()
+            
+        self.main_window.worker = WorkerThread()
+        self.main_window.worker.set_target(
+            organize_pdfs,
+            input_folder,
+            output_folder,
+            excel_path,
+            mode=excel_mode
+        )
+        # Подключаем сигналы
+        self.main_window.worker.progress_signal.connect(self.main_window.update_progress)
+        self.main_window.worker.message_signal.connect(self.main_window.log_message)
+        self.main_window.worker.error_signal.connect(self.main_window.log_message)
+        self.main_window.worker.finished.connect(lambda: self.main_window.set_worker_state(False))
+        # Сбрасываем прогресс-бар при завершении
+        self.main_window.worker.finished.connect(lambda: self.main_window.progress_bar.setValue(0))
+        # Сбрасываем прогресс-бар при ошибке
+        self.main_window.worker.error_signal.connect(lambda: self.main_window.progress_bar.setValue(0))
         
-        def worker_function(log_callback, progress_callback):
-            try:
-                from src.utils_data_manager import DataManager
-                data_manager = DataManager(mode=excel_mode)
-                data_manager.load_excel_data(excel_path)
-                organize_pdfs(
-                    input_folder,
-                    output_folder,
-                    excel_path,
-                    log_callback,
-                    progress_callback,
-                    mode=excel_mode
-                )
-            except Exception as e:
-                log_callback(f"Ошибка при организации PDF: {e}")
-                raise
-        self.main_window.worker = WorkerThread(worker_function)
-        self.main_window.worker.finished.connect(
-            lambda: self.main_window.set_worker_state(False))
-        self.main_window.worker.progress.connect(self.main_window.update_progress)
-        self.main_window.worker.log.connect(self.main_window.log_message)
-        self.main_window.worker.error.connect(self.main_window.log_message)
-        self.main_window.worker.start()
+        # Запускаем
         self.main_window.set_worker_state(True)
+        self.main_window.worker.start()
+        
+        # Сохраняем настройки
+        self.main_window.settings.update(self.get_settings())
 
     def check_inputs(self) -> bool:
         """Проверка наличия всех необходимых входных данных"""
@@ -160,4 +121,11 @@ class OrganizerArea(QWidget):
             'organizer_input': self.input_field.text(),
             'organizer_output': self.output_field.text(),
             'organizer_excel_file': self.excel_field.text()
+        }
+
+    def get_action(self):
+        return {
+            "text": "Организовать PDF",
+            "icon": None,
+            "handler": self.organize_pdf
         }

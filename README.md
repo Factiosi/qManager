@@ -1,85 +1,131 @@
-# qManager
+# qManager v1.9.0
 
-Приложение для организации АФК.
+**Универсальный менеджер PDF файлов** с поддержкой разделения, переименования и организации документов на основе данных Excel.
 
-## Функциональность
+## 🚀 **Основной функционал**
 
-- Разделение PDF файлов по цветовым маркерам
-- Автоматическое переименование документов с использованием OCR
-- Организация файлов с поддержкой Excel
+### **PDF Splitter**
+- Автоматическое разделение PDF по зелёным страницам (АКФК)
+- Настраиваемый порог определения зелёного цвета
+- Поддержка Poppler для конвертации страниц
 
-## Требования
+### **PDF Renamer**
+- Переименование PDF файлов по номерам контейнеров
+- OCR распознавание текста с помощью Tesseract
+- Поддержка файлов "Logos" и "Отчёт"
 
-- Python 3.10
-- Tesseract OCR (включен в поставку)
-- Poppler (включен в поставку)
-- PySide6
-- OpenCV (для обработки изображений)
+### **PDF Organizer**
+- Организация PDF по папкам на основе данных Excel
+- Автоматическое создание структуры папок
+- Объединение файлов в единые PDF по юнитам
 
-## Установка
+### **Playwright Integration**
+- Готовность к интеграции с Playwright для веб-автоматизации
 
-1. Клонируйте репозиторий:
+## 🛠 **Технические требования**
+
+- **Python 3.10.11** (строго)
+- **Windows 10/11** (x64)
+- **PySide6** для GUI
+- **Poppler** для работы с PDF
+- **Tesseract OCR** для распознавания текста
+
+## 📦 **Установка**
+
+### **Для разработчиков:**
 ```bash
-git clone https://github.com/factiosi/qManager.git
+git clone <repository>
 cd qManager
-```
-
-2. Установите зависимости:
-```bash
+python -m venv .venv
+.venv\Scripts\activate
 pip install -r requirements.txt
+python start.py
 ```
 
-## Запуск
+### **Для пользователей:**
+1. Скачайте последний релиз
+2. Запустите `qManager-Setup.exe`
+3. Следуйте инструкциям установщика
 
+## 🔨 **Сборка**
+
+### **Nuitka (рекомендуется):**
 ```bash
-python src/main.py
+python -m nuitka --standalone --onefile --windows-console-mode=disable --include-data-dir=src/resources=src/resources --include-data-dir=vendor=vendor start.py
 ```
 
-## Сборка
-
-Сборка проекта осуществляется с помощью nuitka:
-
+### **PyInstaller:**
 ```bash
-python -m nuitka --standalone --enable-plugin=pyside6 --windows-icon-from-ico=src/resources/Icon.ico --output-dir=dist `
---include-data-dir=src/resources=resources `
---include-data-dir=vendor/poppler/bin=vendor/poppler/bin `
---include-data-dir=vendor/Tesseract-OCR=vendor/Tesseract-OCR `
---include-data-file=src/settings.json=settings.json `
---include-module=src.ui_windows_main_window `
---include-module=src.ui_areas_splitter `
---include-module=src.ui_areas_renamer `
---include-module=src.ui_areas_organizer `
---include-module=src.ui_styles `
---include-module=src.core_settings `
---include-module=src.core_worker `
---include-module=src.pdf_splitter `
---include-module=src.pdf_renamer `
---include-module=src.pdf_organizer `
---include-module=src.utils_data_manager `
-start.py
+pyinstaller --onefile --windowed --add-data "src/resources;src/resources" --add-data "vendor;vendor" start.py
 ```
 
-## Структура проекта
+## 📁 **Структура проекта**
 
-- `src/` - исходный код
-  - `core_settings.py` - управление настройками приложения (хранение в %APPDATA%)
-  - `core_worker.py` - основные рабочие процессы и многопоточная обработка
-  - `main.py` - точка входа в графический интерфейс
-  - `pdf_organizer.py` - интеллектуальная организация PDF файлов
-  - `pdf_renamer.py` - переименование с использованием OCR
-  - `pdf_splitter.py` - разделение по цветовым маркерам
-  - `ui_areas_*.py` - компоненты интерфейса для каждой функции
-  - `ui_styles.py` - настройки стилей и тем оформления
-  - `ui_windows_main_window.py` - главное окно приложения
-  - `utils_data_manager.py` - работа с данными и интеграция с Excel
-- `vendor/` - внешние зависимости (включены в сборку)
-  - `Tesseract-OCR/` - OCR движок для распознавания текста
-  - `poppler/` - библиотека для работы с PDF
-- `resources/` - ресурсы приложения (иконки, конфигурации)
-- `start.py` - точка входа для запуска и сборки
-- `qManager.spec` - конфигурация сборки
-- `requirements.txt` - зависимости Python
+```
+qManager/
+├── start.py                # Точка входа в приложение
+├── src/                    # Исходный код
+│   ├── ui_windows_main_window.py    # Главное окно приложения
+│   ├── ui_areas_*.py               # UI области (splitter, renamer, organizer, settings)
+│   ├── ui_widgets_*.py             # Кастомные виджеты (console, splitter, checkbox)
+│   ├── ui_styles.py                # Стили и темы
+│   ├── pdf_*.py                    # Основная логика (splitter, renamer, organizer)
+│   ├── core_*.py                   # Ядро приложения (worker, settings)
+│   ├── utils_*.py                  # Утилиты (data_manager)
+│   ├── subprocess_hider.py         # Скрытие консольных окон
+│   └── resources/                  # Ресурсы (иконки)
+├── vendor/                 # Внешние зависимости
+│   ├── poppler/           # Poppler для работы с PDF
+│   └── Tesseract-OCR/     # Tesseract для OCR
+├── requirements.txt        # Python зависимости
+├── installer.iss          # Inno Setup скрипт
+└── debug.log              # Файл детального логирования
+```
 
-## Примечание
+## ✨ **Ключевые особенности**
 
-Проект требует Python 3.10 и использует систему сборки Nuitka для создания исполняемого файла. Все внешние зависимости включаются в сборку, что делает возможным запуск на компьютерах без установленного Python.
+- **Современный UI** с поддержкой светлой и тёмной тем
+- **Многопоточность** для длительных операций
+- **Автоматическое определение** путей к зависимостям
+- **Гибкая настройка** параметров для каждого модуля
+- **Поддержка русского языка** в интерфейсе
+
+## 🔧 **Настройка**
+
+### **Темы:**
+- Автоматическое переключение между светлой и тёмной темами
+- Динамическая адаптация цветов и иконок
+
+### **Зависимости:**
+- Автоматический поиск Poppler и Tesseract
+- Поддержка как системных, так и локальных установок
+
+## 📄 **Лицензия**
+
+MIT License - см. файл [LICENSE](LICENSE)
+
+## 🤝 **Поддержка**
+
+- **Issues:** Создавайте issue для багов и предложений
+- **Discussions:** Обсуждайте идеи и задавайте вопросы
+- **Wiki:** Документация и примеры использования
+
+## 🚧 **Важные замечания**
+
+- Приложение **НЕ является консольным** - запускается через GUI
+- Точка входа: **`start.py`** (НЕ `main.py`)
+- Требуется **строго Python 3.10.11** для совместимости
+
+## 🆘 **Решение проблем**
+
+### **Ошибка "Python not found":**
+- Убедитесь, что Python 3.10.11 установлен и добавлен в PATH
+- Проверьте версию: `python --version`
+
+### **Зависимости не найдены:**
+- Проверьте наличие папки `vendor/` с Poppler и Tesseract
+- Убедитесь, что пути указаны правильно
+
+### **Ошибки сборки:**
+- Используйте **`start.py`** как точку входа
+- Проверьте наличие всех необходимых файлов

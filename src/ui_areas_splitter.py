@@ -1,12 +1,13 @@
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QFormLayout, QDoubleSpinBox,
-                              QGroupBox, QStyle)
+"""Модуль области разделения PDF"""
+
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout,
+    QDoubleSpinBox, QGroupBox, QStyle, QFormLayout
+)
 from PySide6.QtCore import Qt
 
 from src.pdf_splitter import split_pdf_by_green_pages, get_poppler_path
 from src.core_worker import WorkerThread
-
-from src.ui_areas_renamer import RenamerArea
-from src.ui_areas_organizer import OrganizerArea
 
 class SplitterArea(QWidget):
     def __init__(self, main_window):
@@ -15,144 +16,142 @@ class SplitterArea(QWidget):
         self.setup_ui()
 
     def setup_ui(self):
+        """Инициализация интерфейса"""
         layout = QVBoxLayout(self)
-
-        group = QGroupBox("PDF Splitter")
+        layout.setContentsMargins(
+            self.main_window.MARGIN_NORMAL,
+            self.main_window.MARGIN_NORMAL,
+            self.main_window.MARGIN_NORMAL,
+            self.main_window.MARGIN_NORMAL,
+        )
+        
+        
+        group = QGroupBox("Настройки разделения PDF")
         form_layout = QFormLayout()
+        form_layout.setContentsMargins(
+            self.main_window.MARGIN_NORMAL,
+            self.main_window.MARGIN_NORMAL,
+            self.main_window.MARGIN_NORMAL,
+            self.main_window.MARGIN_NORMAL,
+        )
 
-        # Выбор входного файла
-        self.input_field = QLineEdit()
-        self.input_field.setPlaceholderText("Выберите PDF файл...")
+        
+        input_container, self.input_field = self.main_window.create_browse_row(
+            "Выберите PDF файл...",
+            file_mode=True,
+            file_filter="PDF Files (*.pdf)"
+        )
         self.input_field.setText(self.main_window.settings.get('splitter_input', ''))
-        input_btn = QPushButton("Обзор")
-        input_btn.setProperty("iconOnly", "true")
-        input_btn.setIcon(self.style().standardIcon(QStyle.SP_FileIcon))
-        input_btn.clicked.connect(
-            lambda: self.main_window.browse_file(self.input_field, "PDF Files (*.pdf)"))
-        input_layout = QHBoxLayout()
-        input_layout.addWidget(self.input_field)
-        input_layout.addWidget(input_btn)
-        form_layout.addRow("Входной файл:", input_layout)
+        form_layout.addRow("Входной файл (PDF):", input_container)
 
-        # Выбор выходной папки
-        self.output_field = QLineEdit()
-        self.output_field.setPlaceholderText("Выберите папку для сохранения...")
+        
+        output_container, self.output_field = self.main_window.create_browse_row(
+            "Выберите папку для сохранения...",
+            file_mode=False
+        )
         self.output_field.setText(self.main_window.settings.get('splitter_output', ''))
-        output_btn = QPushButton("Обзор")
-        output_btn.setProperty("iconOnly", "true")
-        output_btn.setIcon(self.style().standardIcon(QStyle.SP_DirIcon))
-        output_btn.clicked.connect(
-            lambda: self.main_window.browse_directory(self.output_field))
-        output_layout = QHBoxLayout()
-        output_layout.addWidget(self.output_field)
-        output_layout.addWidget(output_btn)
-        form_layout.addRow("Выходная папка:", output_layout)
+        form_layout.addRow("Выходная папка:", output_container)
 
-        # Выбор порогового значения
-        threshold_layout = QHBoxLayout()
+        
+        threshold_container = QWidget()
+        threshold_layout = QHBoxLayout(threshold_container)
+        threshold_layout.setContentsMargins(0, 0, 0, 0)
+        threshold_layout.setSpacing(self.main_window.MARGIN_SMALL)
+        
+        
         self.threshold_spin = QDoubleSpinBox()
         self.threshold_spin.setRange(0.1, 5.0)
         self.threshold_spin.setValue(self.main_window.settings.get('threshold', 2.3))
         self.threshold_spin.setSingleStep(0.1)
         self.threshold_spin.setButtonSymbols(QDoubleSpinBox.NoButtons)
-        
-        minus_btn = QPushButton("−")
-        minus_btn.setProperty("small", "true")
-        minus_btn.clicked.connect(
-            lambda: self.threshold_spin.setValue(self.threshold_spin.value() - 0.1))
-        
-        plus_btn = QPushButton("+")
-        plus_btn.setProperty("small", "true")
-        plus_btn.clicked.connect(
-            lambda: self.threshold_spin.setValue(self.threshold_spin.value() + 0.1))
-        
         self.threshold_spin.setAlignment(Qt.AlignCenter)
-        self.threshold_spin.setFixedWidth(80)
-        self.threshold_spin.setStyleSheet("""
-            QDoubleSpinBox {
-                padding: 2px;
-                border: 1px solid #cccccc;
-                border-radius: 4px;
-                background-color: white;
-            }
-            QDoubleSpinBox:focus {
-                border: 1px solid #2196F3;
-            }
-        """)
+        self.threshold_spin.setFixedHeight(self.main_window.BUTTON_HEIGHT)
+        
+        
+        from PySide6.QtGui import QIcon
+        from src.ui_windows_main_window import load_icon
+        minus_btn = self.main_window.create_button(
+            "",
+            load_icon("minus-square"),
+            lambda: self.threshold_spin.setValue(self.threshold_spin.value() - 0.1),
+            icon_only=True
+        )
+        
+        plus_btn = self.main_window.create_button(
+            "",
+            load_icon("plus-square"),
+            lambda: self.threshold_spin.setValue(self.threshold_spin.value() + 0.1),
+            icon_only=True
+        )
         
         threshold_layout.addWidget(minus_btn)
         threshold_layout.addWidget(self.threshold_spin)
         threshold_layout.addWidget(plus_btn)
         threshold_layout.addStretch()
-        threshold_layout.setSpacing(4)
-        form_layout.addRow("Порог:", threshold_layout)
-
+        
+        form_layout.addRow("Порог зелёной страницы:", threshold_container)
         group.setLayout(form_layout)
         layout.addWidget(group)
+        layout.addStretch()
 
-        # Кнопка разделения
-        self.split_btn = QPushButton("Разделить PDF")
-        self.split_btn.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
-        self.split_btn.clicked.connect(self.split_pdf)
-        layout.addWidget(self.split_btn)
-        self.main_window.start_buttons.append(self.split_btn)
-
-        # Добавляем подсказки
-        self.input_field.setToolTip("Выберите PDF файл для разделения")
-        self.output_field.setToolTip("Выберите папку для сохранения разделенных файлов")
-        self.threshold_spin.setToolTip("Пороговое значение для определения зеленых страниц")
-        self.split_btn.setToolTip("Начать процесс разделения PDF файла")
-
-    def split_pdf(self):
-        """Начать процесс разделения PDF файла"""
-        self.main_window.cleanup_worker()
         
-        if not self.check_inputs():
-            return
-            
-        input_path = self.input_field.text()
-        output_dir = self.output_field.text()
-        threshold = self.threshold_spin.value()
-        
-        def worker_function(log_callback, progress_callback):
-            try:
-                split_pdf_by_green_pages(
-                    input_pdf=input_path,
-                    output_dir=output_dir,
-                    threshold=threshold,
-                    poppler_path=get_poppler_path(),
-                    log_callback=log_callback,
-                    progress_callback=progress_callback
-                )
-            except Exception as e:
-                log_callback(f"Ошибка при разделении PDF: {e}")
-                raise
 
-        self.main_window.worker = WorkerThread(worker_function)
-        self.main_window.worker.finished.connect(
-            lambda: self.main_window.set_worker_state(False))
-        self.main_window.worker.progress.connect(self.main_window.update_progress)
-        self.main_window.worker.log.connect(self.main_window.log_message)
-        self.main_window.worker.error.connect(self.main_window.log_message)
-        self.main_window.worker.start()
-        self.main_window.set_worker_state(True)
-
-    def check_inputs(self) -> bool:
-        """Проверка наличия всех необходимых входных данных"""
-        if not self.input_field.text():
-            self.main_window.log_message("Ошибка: Не выбран входной PDF файл")
-            return False
-            
-        if not self.output_field.text():
-            self.main_window.log_message("Ошибка: Не выбрана выходная папка")
-            return False
-            
-        return True
+        # Добавляем растягивающийся пробел
+        layout.addStretch()
 
     def get_settings(self) -> dict:
-        """Получить текущие настройки для сохранения"""
+        """Возвращает текущие настройки области"""
         return {
             'splitter_input': self.input_field.text(),
             'splitter_output': self.output_field.text(),
             'threshold': self.threshold_spin.value()
+        }
+
+    def split_pdf(self):
+        """Запускает процесс разделения PDF"""
+        input_path = self.input_field.text()
+        output_dir = self.output_field.text()
+        threshold = self.threshold_spin.value()
+        
+        if not input_path or not output_dir:
+            self.main_window.log_message("Выберите входной файл и выходную папку")
+            return
+            
+        # Создаем и настраиваем рабочий поток
+        # Останавливаем предыдущий worker если он запущен
+        if self.main_window.worker and self.main_window.worker.isRunning():
+            self.main_window.stop_worker()
+            
+        self.main_window.worker = WorkerThread()
+        self.main_window.worker.set_target(
+            split_pdf_by_green_pages,
+            input_path,
+            output_dir,
+            get_poppler_path(),
+            threshold
+        )
+        
+        # Подключаем сигналы
+        self.main_window.worker.progress_signal.connect(self.main_window.update_progress)
+        self.main_window.worker.message_signal.connect(self.main_window.log_message)
+        self.main_window.worker.error_signal.connect(self.main_window.log_message)
+        self.main_window.worker.finished.connect(lambda: self.main_window.set_worker_state(False))
+        # Сбрасываем прогресс-бар при завершении
+        self.main_window.worker.finished.connect(lambda: self.main_window.progress_bar.setValue(0))
+        # Сбрасываем прогресс-бар при ошибке
+        self.main_window.worker.error_signal.connect(lambda: self.main_window.progress_bar.setValue(0))
+        
+        # Запускаем
+        self.main_window.set_worker_state(True)
+        self.main_window.worker.start()
+        
+        # Сохраняем настройки
+        self.main_window.settings.update(self.get_settings())
+
+    def get_action(self):
+        """Метаданные для главной кнопки действия"""
+        return {
+            "text": "Разделить PDF",
+            "icon": None,
+            "handler": self.split_pdf
         }
