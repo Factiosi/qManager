@@ -51,12 +51,7 @@ python start.py
 
 ### **Nuitka (рекомендуется):**
 ```bash
-python -m nuitka --standalone --onefile --windows-console-mode=disable --include-data-dir=src/resources=src/resources --include-data-dir=vendor=vendor start.py
-```
-
-### **PyInstaller:**
-```bash
-pyinstaller --onefile --windowed --add-data "src/resources;src/resources" --add-data "vendor;vendor" start.py
+python -m nuitka --standalone --enable-plugin=pyside6 --windows-console-mode=disable --windows-icon-from-ico=src/resources/Icon.ico --output-dir=dist --include-data-dir=src/resources=src/resources --include-data-dir=vendor/poppler/bin=vendor/poppler/bin --include-data-dir=vendor/Tesseract-OCR=vendor/Tesseract-OCR --include-data-file=src/settings.json=settings.json --include-module=src.ui_windows_main_window --include-module=src.ui_areas_splitter --include-module=src.ui_areas_renamer --include-module=src.ui_areas_organizer --include-module=src.ui_styles --include-module=src.core_settings --include-module=src.core_worker --include-module=src.pdf_splitter --include-module=src.pdf_renamer --include-module=src.pdf_organizer --include-module=src.utils_data_manager start.py
 ```
 
 ## 📁 **Структура проекта**
@@ -84,16 +79,13 @@ qManager/
 
 ## ✨ **Ключевые особенности**
 
-- **Современный UI** с поддержкой светлой и тёмной тем
 - **Многопоточность** для длительных операций
 - **Автоматическое определение** путей к зависимостям
 - **Гибкая настройка** параметров для каждого модуля
-- **Поддержка русского языка** в интерфейсе
 
 ## 🔧 **Настройка**
 
 ### **Темы:**
-- Автоматическое переключение между светлой и тёмной темами
 - Динамическая адаптация цветов и иконок
 
 ### **Зависимости:**
@@ -113,14 +105,11 @@ MIT License - см. файл [LICENSE](LICENSE)
 ## 🚧 **Важные замечания**
 
 - Приложение **НЕ является консольным** - запускается через GUI
-- Точка входа: **`start.py`** (НЕ `main.py`)
+- Точка входа: **`start.py`**
 - Требуется **строго Python 3.10.11** для совместимости
 
 ## 🆘 **Решение проблем**
 
-### **Ошибка "Python not found":**
-- Убедитесь, что Python 3.10.11 установлен и добавлен в PATH
-- Проверьте версию: `python --version`
 
 ### **Зависимости не найдены:**
 - Проверьте наличие папки `vendor/` с Poppler и Tesseract
