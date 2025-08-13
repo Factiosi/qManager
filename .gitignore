@@ -1,4 +1,3 @@
-# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -28,26 +27,21 @@ ENV/
 .env
 .venv
 
-# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# Binary dependencies and vendor files
-# Сохраняем vendor/ в репозитории, так как там важные бинарные зависимости
 !vendor/
 !vendor/**/*.dll
 !vendor/**/*.exe
 
-# Системные файлы Windows
 desktop.ini
 Thumbs.db
 *.db
 $RECYCLE.BIN/
 System Volume Information/
 
-# Кэш и временные файлы
 *.log
 *.cache
 .DS_Store
@@ -56,7 +50,6 @@ System Volume Information/
 coverage.xml
 htmlcov/
 
-# Distribution / packaging
 dist/
 build/
 *.spec
