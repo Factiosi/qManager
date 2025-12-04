@@ -42,14 +42,23 @@ class CustomCheckBox(QCheckBox):
         if self.isChecked() and self.check_icon:
             super().paintEvent(event)
             
-            painter = QPainter(self)
-            painter.setRenderHint(QPainter.Antialiasing)
+            # Проверяем, что виджет готов к рисованию
+            if self.width() <= 0 or self.height() <= 0:
+                return
             
-            icon_size = 18
-            x = 1
-            y = (self.height() - icon_size) // 2
+            painter = QPainter()
+            if not painter.begin(self):
+                return
             
-            self.check_icon.paint(painter, x, y, icon_size, icon_size)
-            painter.end()
+            try:
+                painter.setRenderHint(QPainter.Antialiasing)
+                
+                icon_size = 18
+                x = 1
+                y = (self.height() - icon_size) // 2
+                
+                self.check_icon.paint(painter, x, y, icon_size, icon_size)
+            finally:
+                painter.end()
         else:
             super().paintEvent(event)

@@ -26,7 +26,6 @@ class SplitterArea(QWidget):
         )
         
         
-        group = QGroupBox("Настройки разделения PDF")
         form_layout = QFormLayout()
         form_layout.setContentsMargins(
             self.main_window.MARGIN_NORMAL,
@@ -90,8 +89,7 @@ class SplitterArea(QWidget):
         threshold_layout.addStretch()
         
         form_layout.addRow("Порог зелёной страницы:", threshold_container)
-        group.setLayout(form_layout)
-        layout.addWidget(group)
+        layout.addLayout(form_layout)
         layout.addStretch()
 
         

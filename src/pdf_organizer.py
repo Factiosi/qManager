@@ -64,10 +64,22 @@ def get_unique_filename(base_path, original_name):
     logger.debug(f"Сгенерировано уникальное имя: '{new_name}'")
     return new_name
 
-def organize_pdfs(input_folder, output_folder, excel_path=None, log_callback=None, progress_callback=None, mode="logos", worker=None):
-    """Организует PDF-файлы по папкам"""
+def organize_pdfs(input_folder, output_folder, excel_path=None, log_callback=None, progress_callback=None, mode="logos", worker=None, merge_mode: str = "order", filter_mode='unlimited', filter_date_from=None, filter_date_to=None):
+    """Организует PDF-файлы по папкам
+
+    merge_mode:
+        - "order" — объединение по номеру заказа
+        - "bl" — объединение по номеру коносамента (Bill of Lading)
+    
+    filter_mode:
+        - "unlimited" — от новых к старым с ограничением 60 дней
+        - "period" — за указанный период
+    
+    filter_date_from, filter_date_to:
+        - даты начала и конца периода (datetime объекты или None)
+    """
     logger.info(f"Начало операции организации PDF")
-    logger.debug(f"Параметры: input_folder='{input_folder}', output_folder='{output_folder}', excel_path='{excel_path}', mode='{mode}'")
+    logger.debug(f"Параметры: input_folder='{input_folder}', output_folder='{output_folder}', excel_path='{excel_path}', mode='{mode}', merge_mode='{merge_mode}'")
     
     def log(message):
         if log_callback:
@@ -97,16 +109,39 @@ def organize_pdfs(input_folder, output_folder, excel_path=None, log_callback=Non
         os.makedirs(output_folder)
         log(f"Создана выходная папка: {output_folder}")
     
-    # Загрузка Excel
+    # Загрузка данных (Excel или Google Sheets)
     logger.info("Инициализация DataManager")
-    data_manager = DataManager(mode=mode)
+    data_manager = DataManager(mode=mode, merge_mode=merge_mode)
     logger.debug(f"DataManager создан в режиме '{mode}'")
     
-    if excel_path and os.path.exists(excel_path):
+    if mode == "sheets":
+        # Загрузка данных из Google Sheets
+        log("Загрузка данных из Google Sheets...")
+        logger.info("Загрузка данных из Google Sheets")
+        try:
+            result = data_manager.load_sheets_data(
+                filter_mode=filter_mode,
+                filter_date_from=filter_date_from,
+                filter_date_to=filter_date_to
+            )
+            logger.info(f"Google Sheets успешно загружен: {result}")
+            log("Данные из Google Sheets успешно загружены")
+        except Exception as e:
+            error_msg = f"Ошибка при загрузке Google Sheets: {e}"
+            logger.error(error_msg, exc_info=True)
+            log(error_msg)
+            return
+    elif excel_path and os.path.exists(excel_path):
+        # Загрузка данных из Excel
         log("Чтение файла Excel...")
         logger.info(f"Загрузка данных из Excel: {excel_path}")
         try:
-            result = data_manager.load_excel_data(excel_path)
+            result = data_manager.load_excel_data(
+                excel_path,
+                filter_mode=filter_mode,
+                filter_date_from=filter_date_from,
+                filter_date_to=filter_date_to
+            )
             logger.info(f"Excel успешно загружен: {result}")
             log("Данные из Excel успешно загружены")
         except Exception as e:
@@ -176,13 +211,25 @@ def organize_pdfs(input_folder, output_folder, excel_path=None, log_callback=Non
         if container_data:
             logger.debug(f"Данные найдены для контейнера {first_container}: {container_data}")
             
-            company = container_data["company"]
-            if company == "GRAND-TRADE":
-                unit_value = container_data["order"] or "UNKNOWN_ORDER"
-                logger.debug(f"Компания GRAND-TRADE, используем order: {unit_value}")
+            # Определяем ключ объединения по настройке
+            # Для режима Google Sheets всегда используем коносамент
+            if mode == "sheets":
+                merge_by_bill = True
             else:
-                unit_value = container_data["bill"] or "UNKNOWN_BILL"
-                logger.debug(f"Компания {company}, используем bill: {unit_value}")
+                merge_by_bill = (str(merge_mode).lower() == "bl")
+            
+            if merge_by_bill:
+                unit_value = container_data.get("bill") or "UNKNOWN_BILL"
+                logger.debug(f"merge_mode=bl или mode=sheets, используем bill: {unit_value}")
+            else:
+                # Для режима объединения по заказу используем комбинацию "заказ|судно" для уникальности в пределах судна
+                order = container_data.get("order") or ""
+                vessel = container_data.get("vessel") or ""
+                if order and vessel:
+                    unit_value = f"{order}|{vessel}"
+                else:
+                    unit_value = order or "UNKNOWN_ORDER"
+                logger.debug(f"merge_mode=order, используем order|vessel: {unit_value}")
             
             log(f"Файл {filename} связан с ключом: {unit_value}")
 
@@ -190,27 +237,38 @@ def organize_pdfs(input_folder, output_folder, excel_path=None, log_callback=Non
                 processed_units[unit_value] = []
                 logger.debug(f"Создан новый unit: {unit_value}")
 
-            vessel_name = container_data["vessel"]
-            arrival_date = container_data["date"]
-            logger.debug(f"Данные судна: {vessel_name}, дата: {arrival_date}")
+            vessel_name = container_data.get("vessel") or ""
+            arrival_date = container_data.get("date") or ""
+            voyage = container_data.get("voyage") or ""
+            logger.debug(f"Данные судна: {vessel_name}, дата: {arrival_date}, рейс: {voyage}")
             
-            # Оставляем только дату, убираем время, приводим к формату dd.mm.YYYY
-            try:
-                # Попытка распарсить дату в формате YYYY-MM-DD
-                logger.debug(f"Парсинг даты: {arrival_date}")
-                date_obj = datetime.strptime(arrival_date.split()[0], "%Y-%m-%d")
-                arrival_date_str = date_obj.strftime("%d.%m.%Y")
-                logger.debug(f"Дата успешно распарсена: {arrival_date} -> {arrival_date_str}")
-            except Exception as e:
-                # Если не удалось, просто убираем время и запрещённые символы
-                logger.warning(f"Не удалось распарсить дату '{arrival_date}': {e}")
-                arrival_date_str = re.sub(r"[\\/:*?<>|\"]", "_", arrival_date.split()[0])
-                logger.debug(f"Используем очищенную дату: {arrival_date_str}")
+            # Формируем имя папки в зависимости от режима
+            if mode == "sheets":
+                # Для Google Sheets: vessel + voyage (если есть)
+                if voyage:
+                    folder_name = f"{vessel_name} {voyage.replace('/', '-')}"
+                else:
+                    folder_name = vessel_name
+            else:
+                # Для Excel режимов: vessel + дата
+                # Оставляем только дату, убираем время, приводим к формату dd.mm.YYYY
+                try:
+                    # Попытка распарсить дату в формате YYYY-MM-DD
+                    logger.debug(f"Парсинг даты: {arrival_date}")
+                    date_obj = datetime.strptime(arrival_date.split()[0], "%Y-%m-%d")
+                    arrival_date_str = date_obj.strftime("%d.%m.%Y")
+                    logger.debug(f"Дата успешно распарсена: {arrival_date} -> {arrival_date_str}")
+                except Exception as e:
+                    # Если не удалось, просто убираем время и запрещённые символы
+                    logger.warning(f"Не удалось распарсить дату '{arrival_date}': {e}")
+                    arrival_date_str = re.sub(r"[\\/:*?<>|\"]", "_", arrival_date.split()[0] if arrival_date else "")
+                    logger.debug(f"Используем очищенную дату: {arrival_date_str}")
+                
+                folder_name = f"{vessel_name} {arrival_date_str}"
             
-            # Формируем имя папки, оставляя vessel_name как есть, только дату приводим к формату
-            folder_name = f"{vessel_name} {arrival_date_str}"
             logger.debug(f"Исходное имя папки: {folder_name}")
             
+            # Очищаем имя папки от запрещённых символов
             folder_name = re.sub(r"[\\/:*?<>|\"]", "_", folder_name)
             logger.debug(f"Очищенное имя папки: {folder_name}")
             
@@ -228,7 +286,7 @@ def organize_pdfs(input_folder, output_folder, excel_path=None, log_callback=Non
             logger.debug(f"Файл {filename} добавлен в unit {unit_value}")
             
         else:
-            logger.warning(f"Контейнер {first_container} отсутствует в данных Excel")
+            logger.warning(f"Контейнер {first_container} отсутствует в данных")
             log(f"Контейнер {first_container} отсутствует в данных")
         
         if progress_callback:
@@ -271,6 +329,34 @@ def organize_pdfs(input_folder, output_folder, excel_path=None, log_callback=Non
             
             # Получаем все ожидаемые контейнеры для данного unit
             expected_containers = sorted(data_manager.get_containers_by_unit(unit_value))
+            # Подстраховка: если по какой‑то причине список пуст, считаем напрямую из latest_container_data
+            if not expected_containers:
+                try:
+                    if str(merge_mode).lower() == "bl":
+                        norm = str(unit_value).replace(" ", "")
+                        expected_containers = sorted([
+                            c for c, row in data_manager.latest_container_data.items()
+                            if str(row.get("bill") or "").replace(" ", "") == norm
+                        ])
+                    else:
+                        # Проверяем, содержит ли unit_value разделитель "|" (формат "заказ|судно")
+                        unit_str = str(unit_value)
+                        if '|' in unit_str:
+                            parts = unit_str.split('|', 1)
+                            order_part = parts[0] if len(parts) > 0 else ""
+                            vessel_part = parts[1] if len(parts) > 1 else ""
+                            expected_containers = sorted([
+                                c for c, row in data_manager.latest_container_data.items()
+                                if str(row.get("order") or "") == order_part and str(row.get("vessel") or "") == vessel_part
+                            ])
+                        else:
+                            # Старый формат без судна (для обратной совместимости)
+                            expected_containers = sorted([
+                                c for c, row in data_manager.latest_container_data.items()
+                                if str(row.get("order") or "") == unit_str
+                            ])
+                except Exception:
+                    expected_containers = []
             logger.debug(f"Ожидаемые контейнеры для unit {unit_value}: {expected_containers}")
 
             # Логируем для проверки
@@ -281,12 +367,21 @@ def organize_pdfs(input_folder, output_folder, excel_path=None, log_callback=Non
             # Получаем данные для формирования имени файла
             if actual_containers:
                 container_data = data_manager.get_container_data(actual_containers[0])
-                company = container_data["company"]
-                if company == "GRAND-TRADE":
-                    display_value = container_data["order"]
+                # Для режима Google Sheets всегда используем коносамент
+                if mode == "sheets":
+                    merge_by_bill = True
                 else:
-                    display_value = container_data["bill"]
-                logger.debug(f"Значение для отображения: {display_value} (компания: {company})")
+                    merge_by_bill = (str(merge_mode).lower() == "bl")
+                
+                if merge_by_bill:
+                    display_value = container_data.get("bill")
+                else:
+                    # Для режима объединения по заказу извлекаем только номер заказа из unit_value
+                    # (судно уже будет в имени папки)
+                    order = container_data.get("order") or ""
+                    display_value = order
+                company = container_data.get("company", "")
+                logger.debug(f"Значение для отображения: {display_value} (merge_mode={'bl' if merge_by_bill else 'order'}, компания: {company})")
             else:
                 logger.warning(f"Нет контейнеров для unit {unit_value}")
                 continue

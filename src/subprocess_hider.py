@@ -16,19 +16,22 @@ if platform.system() == "Windows":
         _hidden_startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         _hidden_startupinfo.wShowWindow = subprocess.SW_HIDE
         
-        # Сохраняем оригинальные функции
-        _original_popen = subprocess.Popen
+        # Сохраняем оригинальный класс Popen
+        _original_popen_class = subprocess.Popen
         _original_call = subprocess.call
         _original_run = subprocess.run
         
-        # Функции-обертки для скрытия консоли
-        def _hidden_popen(*args, **kwargs):
-            if 'startupinfo' not in kwargs:
-                kwargs['startupinfo'] = _hidden_startupinfo
-            if 'creationflags' not in kwargs:
-                kwargs['creationflags'] = CREATE_NO_WINDOW
-            return _original_popen(*args, **kwargs)
+        # Создаем класс-наследник вместо замены функции
+        class HiddenPopen(_original_popen_class):
+            """Класс-наследник Popen с автоматическим скрытием консоли"""
+            def __init__(self, *args, **kwargs):
+                if 'startupinfo' not in kwargs:
+                    kwargs['startupinfo'] = _hidden_startupinfo
+                if 'creationflags' not in kwargs:
+                    kwargs['creationflags'] = CREATE_NO_WINDOW
+                super().__init__(*args, **kwargs)
         
+        # Функции-обертки для скрытия консоли
         def _hidden_call(*args, **kwargs):
             if 'startupinfo' not in kwargs:
                 kwargs['startupinfo'] = _hidden_startupinfo
@@ -43,8 +46,8 @@ if platform.system() == "Windows":
                 kwargs['creationflags'] = CREATE_NO_WINDOW
             return _original_run(*args, **kwargs)
         
-        # Заменяем глобально
-        subprocess.Popen = _hidden_popen
+        # Заменяем класс Popen на наш класс-наследник
+        subprocess.Popen = HiddenPopen
         subprocess.call = _hidden_call
         subprocess.run = _hidden_run
         

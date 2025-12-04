@@ -6,7 +6,7 @@ import numpy as np
 from PyPDF2 import PdfReader, PdfWriter
 from pdf2image import convert_from_path
 import sys
-from src.utils_data_manager import DataManager
+import time
 
 # Настройка логгирования
 logger = logging.getLogger(__name__)
@@ -42,8 +42,15 @@ except Exception:
     pass  # Игнорируем ошибки
 
 def get_average_color_rgb(image):
-    """Вычисляет средний RGB цвет"""
-    return np.array(image).mean(axis=(0, 1))
+    """Вычисляет средний RGB цвет (оптимизированная версия)"""
+    # Используем downsampling для ускорения: берем каждый N-й пиксель
+    # Для определения цвета достаточно небольшой выборки
+    if image.size[0] * image.size[1] > 10000:  # Если изображение большое
+        # Берем каждый 4-й пиксель по обеим осям (ускоряет в ~16 раз)
+        arr = np.array(image)[::4, ::4]
+    else:
+        arr = np.array(image)
+    return arr.mean(axis=(0, 1))
 
 def is_greenish_hue(avg_rgb, threshold):
     """Проверяет зелёный цвет"""
@@ -65,7 +72,7 @@ def is_white_hue(avg_rgb):
     return is_white
 
 def extract_page_as_image(pdf_path, page_number, poppler_path=None):
-    """Конвертирует страницу PDF в изображение"""
+    """Конвертирует страницу PDF в изображение (используется для обратной совместимости)"""
     if poppler_path is None:
         poppler_path = get_poppler_path()
     
@@ -79,6 +86,48 @@ def extract_page_as_image(pdf_path, page_number, poppler_path=None):
     )
     
     return images[0] if images else None
+
+def extract_all_pages_as_images(pdf_path, poppler_path=None, dpi=72, log_callback=None, progress_callback=None, total_pages=None, worker=None):
+    """Конвертирует все страницы PDF в изображения за один вызов (быстрее чем по одной)"""
+    if poppler_path is None:
+        poppler_path = get_poppler_path()
+    
+    def check_stop():
+        """Проверяет остановку"""
+        if worker and hasattr(worker, 'check_stop'):
+            try:
+                worker.check_stop()
+            except Exception:
+                pass
+    
+    if log_callback and total_pages:
+        try:
+            log_callback(f"Конвертация {total_pages} страниц в изображения...")
+        except Exception:
+            pass
+    
+    check_stop()
+    
+    # Замеряем время конвертации
+    start_time = time.time()
+    
+    # Конвертируем все страницы сразу
+    images = convert_from_path(
+        pdf_path,
+        poppler_path=poppler_path,
+        hide_annotations=True,
+        dpi=dpi
+    )
+    
+    elapsed_time = time.time() - start_time
+    
+    if log_callback and total_pages:
+        try:
+            log_callback(f"Конвертация завершена: {len(images)} страниц за {elapsed_time:.2f} сек")
+        except Exception:
+            pass
+    
+    return images
 
 def split_pdf_by_green_pages(input_pdf, output_dir, poppler_path=None, threshold=2.3, log_callback=None, progress_callback=None, worker=None):
     """Разделяет PDF по зелёным страницам"""
@@ -107,6 +156,29 @@ def split_pdf_by_green_pages(input_pdf, output_dir, poppler_path=None, threshold
     if progress_callback:
         progress_callback(0, total_pages)
     
+    # Конвертируем все страницы сразу - это намного быстрее
+    logger.info("Начало конвертации всех страниц в изображения")
+    try:
+        all_images = extract_all_pages_as_images(
+            input_pdf, 
+            poppler_path, 
+            dpi=50,  # Оптимальный баланс скорости и точности
+            log_callback=log_callback,
+            progress_callback=progress_callback,
+            total_pages=total_pages,
+            worker=worker
+        )
+        logger.info(f"Конвертировано {len(all_images)} страниц")
+    except Exception as e:
+        error_msg = f"Ошибка при конвертации страниц: {e}"
+        logger.error(error_msg, exc_info=True)
+        try:
+            if log_callback:
+                log_callback(error_msg)
+        except Exception:
+            pass
+        return
+    
     page_info = []
     for i in range(total_pages):
         # Проверяем остановку
@@ -114,11 +186,12 @@ def split_pdf_by_green_pages(input_pdf, output_dir, poppler_path=None, threshold
         
         logger.debug(f"Обрабатываем страницу {i+1}/{total_pages}")
         
-        image = extract_page_as_image(input_pdf, i, poppler_path)
-        if image is None:
-            logger.warning(f"Не удалось извлечь изображение со страницы {i+1}")
+        if i >= len(all_images):
+            logger.warning(f"Изображение для страницы {i+1} отсутствует")
+            page_info.append((False, i))
             continue
         
+        image = all_images[i]
         avg_rgb = get_average_color_rgb(image)
         is_green = is_greenish_hue(avg_rgb, threshold)
         

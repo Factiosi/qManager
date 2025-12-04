@@ -250,7 +250,32 @@ def process_pdfs(input_folder, output_folder, excel_path=None, log_callback=None
     if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
         logging.info(f"Poppler путь: {poppler_path}")
 
-    if excel_path and os.path.exists(excel_path):
+    # Загрузка данных (Excel или Google Sheets)
+    if mode == "sheets":
+        # Загрузка данных из Google Sheets
+        if log_callback:
+            log_callback("Загрузка данных из Google Sheets...")
+        try:
+            if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
+                logging.info("Загружаем данные из Google Sheets...")
+            
+            stats = data_manager.load_sheets_data()
+            
+            if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
+                logging.info(f"Google Sheets загружен. Статистика: {stats}")
+            
+            if log_callback:
+                log_callback("Данные из Google Sheets успешно загружены")
+                log_callback(f"Всего строк: {stats.get('total_rows', 0)}")
+                log_callback(f"Валидных контейнеров: {stats.get('valid_containers', 0)}")
+        except Exception as e:
+            error_msg = f"Ошибка при загрузке Google Sheets: {e}"
+            logger.error(error_msg, exc_info=True)
+            if log_callback:
+                log_callback(error_msg)
+            return
+    elif excel_path and os.path.exists(excel_path):
+        # Загрузка данных из Excel
         if log_callback:
             log_callback("Чтение файла Excel...")
         try:
@@ -328,14 +353,42 @@ def process_pdfs(input_folder, output_folder, excel_path=None, log_callback=None
                 else:
                     if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
                         logging.warning(f"Контейнеры не найдены в {filename}")
+                    if log_callback:
+                        log_callback(f"Контейнер не найден в файле {os.path.splitext(filename)[0]}")
+                    # Перемещаем файл в выходную папку с оригинальным именем
+                    unique_name = get_unique_filename(output_folder, filename)
+                    new_path = os.path.join(output_folder, unique_name)
+                    os.rename(file_path, new_path)
+                    if log_callback:
+                        log_callback(f"Файл перемещен с оригинальным именем: {os.path.splitext(unique_name)[0]}")
                     not_renamed_files.append(filename)
             else:
                 if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
                     logging.warning(f"Текст не извлечен из {filename}")
+                if log_callback:
+                    log_callback(f"Не удалось извлечь текст из файла {os.path.splitext(filename)[0]}")
+                # Перемещаем файл в выходную папку с оригинальным именем
+                unique_name = get_unique_filename(output_folder, filename)
+                new_path = os.path.join(output_folder, unique_name)
+                os.rename(file_path, new_path)
+                if log_callback:
+                    log_callback(f"Файл перемещен с оригинальным именем: {os.path.splitext(unique_name)[0]}")
                 not_renamed_files.append(filename)
         except Exception as e:
             if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
                 logging.error(f"Ошибка при обработке {filename}: {e}")
+            if log_callback:
+                log_callback(f"Ошибка при обработке файла {os.path.splitext(filename)[0]}: {str(e)}")
+            # Перемещаем файл в выходную папку с оригинальным именем даже при ошибке
+            try:
+                unique_name = get_unique_filename(output_folder, filename)
+                new_path = os.path.join(output_folder, unique_name)
+                os.rename(file_path, new_path)
+                if log_callback:
+                    log_callback(f"Файл перемещен с оригинальным именем: {os.path.splitext(unique_name)[0]}")
+            except Exception as move_error:
+                if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
+                    logging.error(f"Не удалось переместить файл {filename}: {move_error}")
             not_renamed_files.append(filename)
         
         if progress_callback:

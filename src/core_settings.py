@@ -29,7 +29,11 @@ class SettingsManager:
             
             'debug_mode': False,
             'log_level': 'INFO',
-            'operation_timeout': 30
+            'operation_timeout': 30,
+            
+            'filter_mode': 'unlimited',
+            'filter_date_from': None,
+            'filter_date_to': None
         }
 
     @staticmethod

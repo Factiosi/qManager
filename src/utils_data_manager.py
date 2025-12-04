@@ -2,6 +2,16 @@ from datetime import datetime, timedelta
 import pandas as pd
 import logging
 
+# Маппинг столбцов Google Sheets (индексы)
+SHEETS_COLUMN_INDICES = {
+    'date': 3,      # Столбец D
+    'vessel': 5,    # Столбец F
+    'voyage': 6,    # Столбец G
+    'bill': 8,      # Столбец I
+    'container': 14,# Столбец O
+    'company': 18   # Столбец S
+}
+
 class DataManager:
     EXCEL_COLUMN_MAPPINGS = {
         'container': ['Номер конт / тс'],
@@ -18,9 +28,13 @@ class DataManager:
         'bill': ['Коносамент']
     }
 
-    def __init__(self, mode="logos"):
-        """Инициализация менеджера данных"""
+    def __init__(self, mode="logos", merge_mode: str = "order"):
+        """Инициализация менеджера данных
+        mode: режим чтения Excel (logos/report/sheets)
+        merge_mode: ключ объединения контейнеров (order/bl)
+        """
         self.mode = mode
+        self.merge_mode = (str(merge_mode).lower() if merge_mode else "order")
         self.latest_container_data = {}
         self.containers_by_unit = {}
         self.logger = logging.getLogger(f'DataManager.{mode}')
@@ -72,8 +86,15 @@ class DataManager:
         self.logger.debug(f"Недостаточно цифр в номере контейнера: {len(digits)} < 7")
         return None
 
-    def load_excel_data(self, excel_path):
-        """Загружает данные из Excel"""
+    def load_excel_data(self, excel_path, filter_mode='unlimited', filter_date_from=None, filter_date_to=None):
+        """Загружает данные из Excel
+        
+        Args:
+            excel_path: путь к Excel файлу
+            filter_mode: режим фильтрации ('unlimited' или 'period')
+            filter_date_from: дата начала периода (datetime или None)
+            filter_date_to: дата конца периода (datetime или None)
+        """
         self.logger.info(f"Начало загрузки Excel файла: {excel_path}")
         try:
             with pd.ExcelFile(excel_path) as excel_file:
@@ -111,9 +132,10 @@ class DataManager:
                 end_row = None
                 
                 if self.mode == "report":
-                    # Для режима "Отчёт" читаем только последние 40 дней
+                    # Для режима "Отчёт" читаем от новых к старым с фильтрацией по датам
+                    filter_info = "период" if filter_mode == 'period' else "последние 60 дней"
                     if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
-                        logging.info("Режим 'Отчёт': читаем только последние 40 дней")
+                        logging.info(f"Режим 'Отчёт': читаем {filter_info}")
                     
                     # Итерируемся в обратном порядке для поиска последних данных
                     for i in range(len(df) - 1, -1, -1):
@@ -125,12 +147,29 @@ class DataManager:
                         
                         parsed_date = self._parse_date(date_str)
                         if parsed_date:
-                            # Проверяем, не слишком ли старая дата
-                            days_ago = (datetime.now() - parsed_date).days
-                            if days_ago > 40:
-                                if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
-                                    logging.info(f"Строка {i+1}: дата {parsed_date} слишком старая, прекращаем обработку")
-                                break
+                            # Фильтрация по датам
+                            if filter_mode == 'period':
+                                # Нормализуем даты для сравнения (только дата без времени)
+                                parsed_date_normalized = parsed_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                                if filter_date_from:
+                                    filter_date_from_normalized = filter_date_from.replace(hour=0, minute=0, second=0, microsecond=0)
+                                    if parsed_date_normalized < filter_date_from_normalized:
+                                        if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
+                                            logging.debug(f"Строка {i+1}: дата {parsed_date} раньше начала периода, пропускаем")
+                                        continue
+                                if filter_date_to:
+                                    filter_date_to_normalized = filter_date_to.replace(hour=0, minute=0, second=0, microsecond=0)
+                                    if parsed_date_normalized > filter_date_to_normalized:
+                                        if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
+                                            logging.debug(f"Строка {i+1}: дата {parsed_date} позже конца периода, пропускаем")
+                                        continue
+                            else:
+                                # Проверяем, не слишком ли старая дата (60 дней)
+                                days_ago = (datetime.now() - parsed_date).days
+                                if days_ago > 60:
+                                    if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
+                                        logging.info(f"Строка {i+1}: дата {parsed_date} слишком старая, прекращаем обработку")
+                                    break
                             
                             if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
                                 logging.debug(f"Строка {i+1}: дата {parsed_date} подходит")
@@ -148,6 +187,8 @@ class DataManager:
                                 vessel = str(row.iloc[column_indices['vessel']]) if column_indices['vessel'] is not None else None
                                 date = str(row.iloc[column_indices['date']]) if column_indices['date'] is not None else None
                                 bill = str(row.iloc[column_indices['bill']]) if column_indices['bill'] is not None else None
+                                if bill is not None:
+                                    bill = bill.replace(" ", "")
                                 
                                 if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
                                     logging.debug(f"Строка {i+1}: order='{order}', vessel='{vessel}', date='{date}', bill='{bill}'")
@@ -195,8 +236,8 @@ class DataManager:
                         if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
                             logging.debug(f"Обработка суффикса '{suffix}': {len(containers)} записей")
                         
-                        # Берем последний контейнер для каждого суффикса
-                        latest_container = containers[-1]
+                        # Берем первый контейнер для каждого суффикса (самый свежий, т.к. читаем от новых к старым)
+                        latest_container = containers[0]
                         self.latest_container_data[latest_container['container']] = {
                             'company': 'GRAND-TRADE' if latest_container['order'] else 'OTHER',
                             'order': latest_container['order'],
@@ -214,11 +255,40 @@ class DataManager:
                         'valid_containers': valid_containers
                     }
                 else:
-                    # Для режима "Logos" - стандартная обработка
+                    # Для режима "Logos" - обратный порядок с фильтрацией по датам
+                    filter_info = "период" if filter_mode == 'period' else "последние 60 дней"
                     if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
-                        logging.info("Режим 'Logos': стандартная обработка всех строк")
+                        logging.info(f"Режим 'Logos': читаем от новых к старым, {filter_info}")
                     
-                    for i, row in df.iterrows():
+                    # Итерируемся в обратном порядке для поиска последних данных
+                    for i in range(len(df) - 1, -1, -1):
+                        row = df.iloc[i]
+                        date_str = str(row.iloc[column_indices['date']])
+                        
+                        if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
+                            logging.debug(f"Обработка строки {i+1}")
+                        
+                        parsed_date = self._parse_date(date_str)
+                        if parsed_date:
+                            # Фильтрация по датам
+                            if filter_mode == 'period':
+                                # Проверяем, попадает ли дата в указанный период
+                                if filter_date_from and parsed_date < filter_date_from:
+                                    if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
+                                        logging.debug(f"Строка {i+1}: дата {parsed_date} раньше начала периода, пропускаем")
+                                    continue
+                                if filter_date_to and parsed_date > filter_date_to:
+                                    if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
+                                        logging.debug(f"Строка {i+1}: дата {parsed_date} позже конца периода, пропускаем")
+                                    continue
+                            else:
+                                # Проверяем, не слишком ли старая дата (60 дней)
+                                days_ago = (datetime.now() - parsed_date).days
+                                if days_ago > 60:
+                                    if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
+                                        logging.info(f"Строка {i+1}: дата {parsed_date} слишком старая, прекращаем обработку")
+                                    break
+                        
                         container_str = str(row.iloc[column_indices['container']])
                         container_number = self._extract_container_number(container_str)
                         
@@ -231,6 +301,8 @@ class DataManager:
                             vessel = str(row.iloc[column_indices['vessel']]) if column_indices['vessel'] is not None else None
                             date = str(row.iloc[column_indices['date']]) if column_indices['date'] is not None else None
                             bill = str(row.iloc[column_indices['bill']]) if column_indices['bill'] is not None else None
+                            if bill is not None:
+                                bill = bill.replace(" ", "")
                             
                             if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
                                 logging.debug(f"Строка {i+1}: order='{order}', vessel='{vessel}', date='{date}', bill='{bill}'")
@@ -261,22 +333,22 @@ class DataManager:
                         else:
                             if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
                                 logging.debug(f"Строка {i+1}: невалидный номер контейнера")
-                    
-                    if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
-                        logging.info(f"Обработка завершена: {valid_rows} строк, {valid_containers} контейнеров")
-                    
-                    # Очищаем кэш
-                    self.latest_container_data.clear()
-                    if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
-                        logging.debug("Очищен кэш latest_container_data")
+                
+                if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
+                    logging.info(f"Обработка завершена: {valid_rows} строк, {valid_containers} контейнеров")
+                
+                # Очищаем кэш
+                self.latest_container_data.clear()
+                if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
+                    logging.debug("Очищен кэш latest_container_data")
                     
                     # Обрабатываем суффиксы
                     for suffix, containers in self.containers_by_unit.items():
                         if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
                             logging.debug(f"Обработка суффикса '{suffix}': {len(containers)} записей")
                         
-                        # Берем последний контейнер для каждого суффикса
-                        latest_container = containers[-1]
+                        # Берем первый контейнер для каждого суффикса (самый свежий, т.к. читаем от новых к старым)
+                        latest_container = containers[0]
                         self.latest_container_data[latest_container['container']] = {
                             'company': 'GRAND-TRADE' if latest_container['order'] else 'OTHER',
                             'order': latest_container['order'],
@@ -288,14 +360,129 @@ class DataManager:
                     if hasattr(logging.getLogger(), 'handlers') and any(hasattr(h, 'console_widget') for h in logging.getLogger().handlers):
                         logging.info(f"Данные сохранены: {len(self.latest_container_data)} уникальных контейнеров")
                     
-                    return {
-                        'total_rows': len(df),
-                        'valid_rows_range': (start_row, end_row),
-                        'valid_containers': valid_containers
-                    }
+                return {
+                    'total_rows': len(df),
+                    'valid_rows_range': (start_row, end_row),
+                    'valid_containers': valid_containers
+                }
                     
         except Exception as e:
             self.logger.error(f"Ошибка при загрузке Excel: {e}", exc_info=True)
+            raise
+
+    def load_sheets_data(self, credentials_file=None, spreadsheet_id=None, range_name=None, filter_mode='unlimited', filter_date_from=None, filter_date_to=None):
+        """Загружает данные из Google Sheets
+        
+        Args:
+            credentials_file: путь к файлу credentials (опционально, используется хардкод)
+            spreadsheet_id: ID таблицы (опционально, используется хардкод)
+            range_name: диапазон ячеек (опционально, используется хардкод)
+            filter_mode: режим фильтрации ('unlimited' или 'period')
+            filter_date_from: дата начала периода (datetime или None)
+            filter_date_to: дата конца периода (datetime или None)
+        
+        Returns:
+            dict: статистика загрузки
+        """
+        self.logger.info("Начало загрузки данных из Google Sheets")
+        try:
+            from src.google_sheets_manager import GoogleSheetsManager
+            
+            # Используем хардкод параметров, если не указаны
+            manager = GoogleSheetsManager(credentials_file, spreadsheet_id)
+            data = manager.get_data(range_name)
+            
+            self.logger.info(f"Получено {len(data)} строк из Google Sheets")
+            
+            # Очищаем кэш
+            self.latest_container_data.clear()
+            
+            valid_containers = 0
+            filter_info = "период" if filter_mode == 'period' else "последние 60 дней"
+            self.logger.info(f"Google Sheets: читаем от новых к старым, {filter_info}")
+            
+            # Обрабатываем строки в обратном порядке (с конца к началу)
+            # Это гарантирует, что при дубликатах контейнеров используется последняя запись
+            for i in range(len(data) - 1, -1, -1):
+                row = data[i]
+                row_idx = i + 2  # Диапазон начинается с A2, без заголовков
+                try:
+                    # Проверяем, что строка достаточно длинная
+                    if len(row) <= max(SHEETS_COLUMN_INDICES.values()):
+                        self.logger.debug(f"Строка {row_idx}: недостаточно данных, пропускаем")
+                        continue
+                    
+                    # Извлекаем данные по индексам
+                    container = str(row[SHEETS_COLUMN_INDICES['container']]).strip() if len(row) > SHEETS_COLUMN_INDICES['container'] else ""
+                    if not container:
+                        continue
+                    
+                    # Пропускаем, если контейнер уже обработан (т.к. идём с конца, первая встреча = последняя запись)
+                    if container in self.latest_container_data:
+                        self.logger.debug(f"Строка {row_idx}: контейнер '{container}' уже обработан (пропускаем более старую запись)")
+                        continue
+                    
+                    # Извлекаем остальные данные
+                    date = str(row[SHEETS_COLUMN_INDICES['date']]).strip() if len(row) > SHEETS_COLUMN_INDICES['date'] else ""
+                    vessel = str(row[SHEETS_COLUMN_INDICES['vessel']]).strip() if len(row) > SHEETS_COLUMN_INDICES['vessel'] else ""
+                    voyage = str(row[SHEETS_COLUMN_INDICES['voyage']]).strip() if len(row) > SHEETS_COLUMN_INDICES['voyage'] else ""
+                    bill = str(row[SHEETS_COLUMN_INDICES['bill']]).strip() if len(row) > SHEETS_COLUMN_INDICES['bill'] else ""
+                    company = str(row[SHEETS_COLUMN_INDICES['company']]).strip() if len(row) > SHEETS_COLUMN_INDICES['company'] else ""
+                    
+                    # Фильтрация по датам
+                    if date:
+                        parsed_date = self._parse_date(date)
+                        if parsed_date:
+                            if filter_mode == 'period':
+                                # Нормализуем даты для сравнения (только дата без времени)
+                                parsed_date_normalized = parsed_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                                if filter_date_from:
+                                    filter_date_from_normalized = filter_date_from.replace(hour=0, minute=0, second=0, microsecond=0)
+                                    if parsed_date_normalized < filter_date_from_normalized:
+                                        self.logger.debug(f"Строка {row_idx}: дата {parsed_date} раньше начала периода, пропускаем")
+                                        continue
+                                if filter_date_to:
+                                    filter_date_to_normalized = filter_date_to.replace(hour=0, minute=0, second=0, microsecond=0)
+                                    if parsed_date_normalized > filter_date_to_normalized:
+                                        self.logger.debug(f"Строка {row_idx}: дата {parsed_date} позже конца периода, пропускаем")
+                                        continue
+                            else:
+                                # Проверяем, не слишком ли старая дата (60 дней)
+                                days_ago = (datetime.now() - parsed_date).days
+                                if days_ago > 60:
+                                    self.logger.info(f"Строка {row_idx}: дата {parsed_date} слишком старая, прекращаем обработку")
+                                    break
+                    
+                    # Убираем пробелы из коносамента
+                    if bill:
+                        bill = bill.replace(" ", "")
+                    
+                    # Конвертируем в формат словаря, совместимый с Excel режимами
+                    self.latest_container_data[container] = {
+                        'company': company if company else 'OTHER',
+                        'order': None,  # Для Google Sheets нет номера заказа
+                        'vessel': vessel if vessel else '',
+                        'date': date if date else '',
+                        'bill': bill if bill else '',
+                        'voyage': voyage if voyage else ''  # Дополнительное поле для voyage
+                    }
+                    
+                    valid_containers += 1
+                    self.logger.debug(f"Строка {row_idx}: контейнер '{container}' добавлен")
+                    
+                except Exception as e:
+                    self.logger.error(f"Ошибка при обработке строки {row_idx} Google Sheets: {e}")
+                    continue
+            
+            self.logger.info(f"Данные из Google Sheets загружены: {valid_containers} контейнеров")
+            
+            return {
+                'total_rows': len(data),
+                'valid_containers': valid_containers
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Ошибка при загрузке Google Sheets: {e}", exc_info=True)
             raise
 
     def process_data(self):
@@ -309,8 +496,22 @@ class DataManager:
             try:
                 self.logger.debug(f"Обработка контейнера '{container}'")
                 
-                company = row["company"]
-                unit = row["order"] if company == "GRAND-TRADE" else row["bill"]
+                company = row.get("company", "")
+                
+                # Для режима Google Sheets всегда используем коносамент
+                if self.mode == "sheets":
+                    unit = row.get("bill") or ""
+                else:
+                    # Для Excel режимов: bl -> bill; иначе: GRAND-TRADE -> order|vessel, остальные -> bill
+                    if self.merge_mode == "bl":
+                        unit = row.get("bill")
+                    elif company == "GRAND-TRADE":
+                        # Для заказов используем комбинацию "заказ|судно" для уникальности в пределах судна
+                        order = row.get("order") or ""
+                        vessel = row.get("vessel") or ""
+                        unit = f"{order}|{vessel}" if order and vessel else order
+                    else:
+                        unit = row.get("bill")
                 
                 if not unit:
                     self.logger.debug(f"Контейнер '{container}': unit пустой, пропускаем")
@@ -357,6 +558,26 @@ class DataManager:
             list: Список номеров контейнеров для юнита или пустой список, если не найдено.
         """
         self.logger.debug(f"Запрос контейнеров для unit '{unit}'")
-        result = self.containers_by_unit.get(unit, [])
+        result = self.containers_by_unit.get(unit)
+        if not result:
+            # Подстраховка: если по какой‑то причине unit не собран в process_data,
+            # вычисляем на лету из latest_container_data, учитывая merge_mode.
+            norm = (str(unit) if unit is not None else "")
+            norm = norm.replace(" ", "")
+            if self.merge_mode == "bl":
+                result = [c for c, row in self.latest_container_data.items()
+                          if (str(row.get('bill') or '').replace(' ', '')) == norm]
+            else:
+                # Проверяем, содержит ли unit разделитель "|" (формат "заказ|судно")
+                if '|' in norm:
+                    parts = norm.split('|', 1)
+                    order_part = parts[0] if len(parts) > 0 else ""
+                    vessel_part = parts[1] if len(parts) > 1 else ""
+                    result = [c for c, row in self.latest_container_data.items()
+                              if str(row.get('order') or '') == order_part and str(row.get('vessel') or '') == vessel_part]
+                else:
+                    # Старый формат без судна (для обратной совместимости)
+                    result = [c for c, row in self.latest_container_data.items()
+                              if str(row.get('order') or '') == norm]
         self.logger.debug(f"Unit '{unit}': найдено {len(result)} контейнеров: {result}")
         return result

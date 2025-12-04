@@ -194,7 +194,7 @@ def get_stylesheet(dark_mode=False):
         color: {colors['text_color']};
         border: 1px solid {colors['border_color']};
         border-radius: {BORDER_RADIUS};
-        padding: {PADDING};
+        padding: 3px {PADDING};
     }}
     
     QLineEdit:focus {{
@@ -204,6 +204,34 @@ def get_stylesheet(dark_mode=False):
     QLineEdit:disabled {{
         background-color: {colors['disabled_bg']};
         color: {colors['disabled_text']};
+    }}
+    
+    /* Поля выбора даты */
+    QDateEdit {{
+        background-color: {colors['widget_bg']};
+        color: {colors['text_color']};
+        border: 1px solid {colors['border_color']};
+        border-radius: {BORDER_RADIUS};
+        padding: 3px {PADDING};
+    }}
+    
+    QDateEdit:hover {{
+        border: 1px solid {colors['accent_color']};
+    }}
+    
+    QDateEdit:focus {{
+        border: 1px solid {colors['accent_color']};
+    }}
+    
+    QDateEdit:disabled {{
+        background-color: {colors['disabled_bg']};
+        color: {colors['disabled_text']};
+    }}
+    
+    /* Скрываем кнопки спинбокса в QDateEdit */
+    QDateEdit::up-button, QDateEdit::down-button {{
+        width: 0px;
+        border: none;
     }}
     
     /* Выпадающие списки */

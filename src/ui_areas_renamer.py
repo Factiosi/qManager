@@ -21,7 +21,7 @@ class RenamerArea(QWidget):
             self.main_window.MARGIN_NORMAL,
         )
 
-        group = QGroupBox("Переименование PDF")
+
         form_layout = QFormLayout()
         form_layout.setContentsMargins(
             self.main_window.MARGIN_NORMAL,
@@ -54,14 +54,62 @@ class RenamerArea(QWidget):
         )
         self.excel_field.setText(self.main_window.settings.get('excel_file', ''))
         form_layout.addRow("Excel файл:", excel_container)
+        self.excel_container = excel_container  # Сохраняем ссылку на контейнер
+        self.excel_form_row_index = form_layout.rowCount() - 1  # Индекс строки в форме
+        self.form_layout = form_layout  # Сохраняем ссылку на форму
 
-        group.setLayout(form_layout)
-        layout.addWidget(group)
+        layout.addLayout(form_layout)
         layout.addStretch()
 
+        # Обновляем видимость поля Excel в зависимости от режима
+        # Используем QTimer для отложенного подключения, чтобы settings_area был создан
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(200, lambda: self.update_excel_field_visibility())
+        QTimer.singleShot(300, self.connect_settings_changes)
         
         self.input_field.setToolTip("Выберите папку с PDF файлами для переименования")
         self.output_field.setToolTip("Выберите папку для сохранения переименованных файлов")
+    
+    def update_excel_field_visibility(self):
+        """Обновляет видимость поля Excel в зависимости от режима таблиц"""
+        excel_mode = self.main_window.settings.get('excel_mode', 'logos')
+        if excel_mode == 'sheets':
+            # Скрываем поле Excel для режима Google Sheets
+            if hasattr(self, 'excel_container'):
+                self.excel_container.setVisible(False)
+            if hasattr(self, 'excel_field'):
+                self.excel_field.setVisible(False)
+            # Скрываем метку через форму
+            if hasattr(self, 'form_layout') and hasattr(self, 'excel_form_row_index'):
+                try:
+                    item = self.form_layout.itemAt(self.excel_form_row_index, QFormLayout.LabelRole)
+                    if item and item.widget():
+                        item.widget().setVisible(False)
+                except Exception:
+                    pass
+        else:
+            if hasattr(self, 'excel_container'):
+                self.excel_container.setVisible(True)
+            if hasattr(self, 'excel_field'):
+                self.excel_field.setVisible(True)
+            # Показываем метку через форму
+            if hasattr(self, 'form_layout') and hasattr(self, 'excel_form_row_index'):
+                try:
+                    item = self.form_layout.itemAt(self.excel_form_row_index, QFormLayout.LabelRole)
+                    if item and item.widget():
+                        item.widget().setVisible(True)
+                except Exception:
+                    pass
+    
+    def connect_settings_changes(self):
+        """Подключает обработчик изменений режима таблиц"""
+        if hasattr(self.main_window, 'settings_area'):
+            try:
+                self.main_window.settings_area.excel_mode_combo.currentTextChanged.connect(
+                    lambda: self.update_excel_field_visibility()
+                )
+            except Exception:
+                pass
 
     def rename_pdf(self):
         """
@@ -72,8 +120,13 @@ class RenamerArea(QWidget):
             
         input_dir = self.input_field.text()
         output_dir = self.output_field.text()
-        excel_path = self.excel_field.text()
         excel_mode = self.main_window.settings.get('excel_mode', 'logos')
+        
+        # Для режима Google Sheets передаем None вместо пути к Excel
+        if excel_mode == 'sheets':
+            excel_path = None
+        else:
+            excel_path = self.excel_field.text()
 
         # Останавливаем предыдущий worker если он запущен
         if self.main_window.worker and self.main_window.worker.isRunning():
@@ -108,7 +161,9 @@ class RenamerArea(QWidget):
             self.main_window.log_message("Ошибка: Не выбрана выходная папка")
             return False
             
-        if not self.excel_field.text():
+        # Для режима Google Sheets не требуем Excel файл
+        excel_mode = self.main_window.settings.get('excel_mode', 'logos')
+        if excel_mode != 'sheets' and not self.excel_field.text():
             self.main_window.log_message("Ошибка: Не выбран Excel файл")
             return False
             

@@ -1,5 +1,7 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QGroupBox, QFormLayout, QLabel
-
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QLabel
+)
+from PySide6.QtCore import Qt
 
 class PlaywrightArea(QWidget):
     def __init__(self, main_window):
@@ -15,17 +17,14 @@ class PlaywrightArea(QWidget):
             self.main_window.MARGIN_NORMAL,
             self.main_window.MARGIN_NORMAL,
         )
-        group = QGroupBox("Playwright")
-        form = QFormLayout()
-        form.addRow(QLabel("Здесь появятся инструменты Playwright (в разработке)."))
-        group.setLayout(form)
-        layout.addWidget(group)
+
+        # Сообщение о недоступности
+        label = QLabel("Временно недоступно. В разработке")
+        label.setAlignment(Qt.AlignCenter)
+        label.setStyleSheet("font-size: 16px; color: #666;")
+        layout.addWidget(label)
         layout.addStretch()
 
     def get_action(self):
-        return {
-            "text": "",
-            "icon": None,
-            "handler": None
-        }
+        return None
 

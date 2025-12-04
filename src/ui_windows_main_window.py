@@ -8,7 +8,7 @@ if PROJECT_ROOT not in sys.path:
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QFileDialog, QProgressBar, QLineEdit,
-    QTabWidget, QStyle, QFrame, QSizePolicy
+    QTabWidget, QStyle, QFrame, QSizePolicy, QScrollArea
 )
 from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor
 from PySide6.QtSvg import QSvgRenderer
@@ -186,6 +186,8 @@ class MainWindow(QMainWindow):
         splitter.addWidget(self.console)
         splitter.setStretchFactor(0, 10)
         splitter.setStretchFactor(1, 1)
+        # Сохраняем ссылку для обновления иконки при смене темы
+        self.main_splitter = splitter
         main_layout.addWidget(splitter)
 
         # Панель управления под сплиттером
@@ -197,6 +199,12 @@ class MainWindow(QMainWindow):
         
         # Применяем стили
         self.apply_styles()
+
+        # Применяем видимость элементов по активной вкладке (после создания консоли и панели)
+        try:
+            self.on_tab_changed(self.tabs.currentIndex())
+        except Exception:
+            pass
         
     def setup_tabs(self):
         """Настройка вкладок"""
@@ -212,13 +220,21 @@ class MainWindow(QMainWindow):
         self.organizer_area = OrganizerArea(self)
         self.playwright_area = PlaywrightArea(self)
         self.settings_area = SettingsArea(self)
+        # Оборачиваем настройки в скролл, чтобы их высота не ограничивала сплиттер
+        self.settings_tab = QScrollArea()
+        self.settings_tab.setWidgetResizable(True)
+        self.settings_tab.setFrameShape(QFrame.NoFrame)
+        self.settings_tab.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        # Прозрачный фон, чтобы корректно применялась светлая тема
+        self.settings_tab.setStyleSheet("QScrollArea{background:transparent;} QScrollArea > QWidget{background:transparent;} QScrollArea > QWidget > QWidget{background:transparent;}")
+        self.settings_tab.setWidget(self.settings_area)
         
         # Иконки вкладок (кастомные с фоллбеком)
         self.tabs.addTab(self.splitter_area, load_icon("tab_splitter", QStyle.SP_FileDialogDetailedView, self), "Разделение")
         self.tabs.addTab(self.renamer_area, load_icon("tab_renamer", QStyle.SP_FileIcon, self), "Переименование")
         self.tabs.addTab(self.organizer_area, load_icon("tab_organizer", QStyle.SP_DirIcon, self), "Организация")
         self.tabs.addTab(self.playwright_area, load_icon("tab_playwright", QStyle.SP_DesktopIcon, self), "Playwright")
-        self.tabs.addTab(self.settings_area, load_icon("tab_settings", QStyle.SP_FileDialogInfoView, self), "Настройки")
+        self.tabs.addTab(self.settings_tab, load_icon("tab_settings", QStyle.SP_FileDialogInfoView, self), "Настройки")
         
         # Восстанавливаем активную вкладку
         last_tab = self.settings.get('last_tab', 0)
@@ -360,6 +376,12 @@ class MainWindow(QMainWindow):
             self.tabs.setTabIcon(4, load_icon("tab_settings", QStyle.SP_FileDialogInfoView, self))
         except Exception:
             pass
+        
+        # Обновляем иконку сплиттера
+        if hasattr(self, 'main_splitter') and self.main_splitter:
+            handle_icon = load_tinted_icon("resize", None, self, color_hex="#F9FAFB") if ui_styles.DARK_MODE else load_icon("resize", None, self)
+            self.main_splitter.setHandleIcon(handle_icon)
+        
         if hasattr(self, 'action_btn') and self.action_btn:
             # Используем QTimer для отложенного обновления, чтобы избежать конфликтов
             from PySide6.QtCore import QTimer
@@ -433,13 +455,31 @@ class MainWindow(QMainWindow):
             from PySide6.QtCore import QTimer
             QTimer.singleShot(50, self.update_action_button)
         
-        # Обновляем текст прогресс-бара в зависимости от вкладки
+        # Скрываем/показываем прогресс бар и консоль в зависимости от вкладки
+        current_widget = self.tabs.currentWidget()
+        
         if hasattr(self, 'progress_bar') and self.progress_bar:
-            current_widget = self.tabs.currentWidget()
-            if current_widget == self.splitter_area:
-                self.progress_bar.setFormat("Страница %v из %m")
+            if current_widget == getattr(self, 'settings_tab', None):
+                self.progress_bar.setVisible(False)
             else:
-                self.progress_bar.setFormat("Файл %v из %m")
+                self.progress_bar.setVisible(True)
+                if current_widget == self.splitter_area:
+                    self.progress_bar.setFormat("Страница %v из %m")
+                else:
+                    self.progress_bar.setFormat("Файл %v из %m")
+        
+        if hasattr(self, 'console') and self.console:
+            if current_widget == getattr(self, 'settings_tab', None):
+                self.console.setVisible(False)
+            else:
+                self.console.setVisible(True)
+        
+        # Скрываем/показываем панель управления
+        if hasattr(self, 'control_panel') and self.control_panel:
+            if current_widget == getattr(self, 'settings_tab', None):
+                self.control_panel.setVisible(False)
+            else:
+                self.control_panel.setVisible(True)
 
     def update_action_button(self):
         """Обновляет текст и иконку кнопки действия согласно активной вкладке."""
@@ -458,7 +498,7 @@ class MainWindow(QMainWindow):
             
         text, icon = self.get_current_action_meta()
         handler = self.get_current_action_handler()
-        if not handler:
+        if not handler or text is None:
             self.action_btn.setVisible(False)
             return
             
@@ -492,6 +532,8 @@ class MainWindow(QMainWindow):
         current = self.tabs.currentWidget()
         if hasattr(current, "get_action"):
             meta = current.get_action()
+            if meta is None:
+                return None, None
             return meta.get("text", "Запустить"), meta.get("icon", QStyle.SP_MediaPlay)
         return "Запустить", QStyle.SP_MediaPlay
 
@@ -499,6 +541,8 @@ class MainWindow(QMainWindow):
         current = self.tabs.currentWidget()
         if hasattr(current, "get_action"):
             meta = current.get_action()
+            if meta is None:
+                return None
             return meta.get("handler")
         return None
 

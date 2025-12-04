@@ -14,19 +14,32 @@ class IconSplitterHandle(QSplitterHandle):
         self.update()
 
     def sizeHint(self):
+        parent = self.parentWidget()
+        if not parent:
+            return QSize(self._size, self._size)
         if self.orientation() == Qt.Vertical:
-            return QSize(self.parentWidget().width(), self._size)
-        return QSize(self._size, self.parentWidget().height())
+            return QSize(parent.width(), self._size)
+        return QSize(self._size, parent.height())
 
     def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        if not self._icon.isNull():
-            pm = self._icon.pixmap(self._size, self._size)
-            x = (self.width() - pm.width()) // 2
-            y = (self.height() - pm.height()) // 2
-            painter.drawPixmap(x, y, pm)
-        painter.end()
+        # Проверяем, что виджет готов к рисованию
+        if self.width() <= 0 or self.height() <= 0:
+            return
+        
+        painter = QPainter()
+        if not painter.begin(self):
+            return
+        
+        try:
+            painter.setRenderHint(QPainter.Antialiasing)
+            if not self._icon.isNull():
+                pm = self._icon.pixmap(self._size, self._size)
+                if pm and not pm.isNull():
+                    x = (self.width() - pm.width()) // 2
+                    y = (self.height() - pm.height()) // 2
+                    painter.drawPixmap(x, y, pm)
+        finally:
+            painter.end()
 
 
 class IconSplitter(QSplitter):
