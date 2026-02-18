@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Сборка и дистрибуция
+build/
+dist/
+*.egg-info/
+*.egg
+.installed.cfg
+eggs/
+.eggs/
+sdist/
+wheels/
+share/python-wheels/
+
+# Виртуальное окружение
+.venv/
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Логи и кэш
+*.log
+*.cache
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Системные файлы
+.DS_Store
+desktop.ini
+Thumbs.db
+$RECYCLE.BIN/
+
+# Google Cloud credentials
+*ancient-voltage*.json
+
+# Сторонние репозитории, скачанные для анализа
+gbdpi/
+
+# PyInstaller
+*.spec
