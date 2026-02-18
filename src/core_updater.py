@@ -6,7 +6,7 @@ import urllib.request
 
 from PySide6.QtCore import QThread, Signal
 
-VERSION = "1.9.3a"
+VERSION = "1.9.3"
 _GITHUB_REPO = "Factiosi/qManager"
 _API_URL = f"https://api.github.com/repos/{_GITHUB_REPO}/releases/latest"
 _CHECK_TIMEOUT = 15

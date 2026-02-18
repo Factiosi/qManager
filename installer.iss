@@ -1,6 +1,6 @@
 [Setup]
 AppName=qManager
-AppVersion=1.9.3a
+AppVersion=1.9.3
 AppPublisher=Factiosi
 AppComments=Программа для автоматизации работы с АКФК (Актами Карантинного Фитосанитарного Контроля)
 DefaultDirName={pf}\qManager
