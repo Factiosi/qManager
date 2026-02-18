@@ -3,6 +3,7 @@ import json
 import re
 import tempfile
 import urllib.request
+import urllib.error
 
 from PySide6.QtCore import QThread, Signal
 
@@ -43,6 +44,11 @@ class UpdateChecker(QThread):
                 self.update_available.emit(latest, url)
             else:
                 self.no_update.emit()
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                self.no_update.emit()
+            else:
+                self.error.emit(f"HTTP Error {e.code}")
         except StopIteration:
             self.error.emit("Установщик не найден в релизе")
         except Exception as e:
