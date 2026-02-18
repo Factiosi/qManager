@@ -19,7 +19,7 @@ logging.basicConfig(
 )
 
 # Активируем глобальный перехватчик subprocess
-import src.subprocess_hider
+import src.utils_subprocess_hider
 
 # Запускаем приложение
 from PySide6.QtWidgets import QApplication

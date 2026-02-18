@@ -2,40 +2,60 @@
 Кастомный чекбокс с иконкой check.svg
 """
 
-from PySide6.QtWidgets import QCheckBox, QStyle
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QPainter, QPixmap, QIcon
+from PySide6.QtWidgets import QCheckBox
+from PySide6.QtCore import Qt, QEvent
+from PySide6.QtGui import QPainter, QPixmap, QIcon, QColor
 from PySide6.QtSvg import QSvgRenderer
 import os
+import src.ui_styles as ui_styles
 
 class CustomCheckBox(QCheckBox):
     def __init__(self, text="", parent=None):
         super().__init__(text, parent)
         self.check_icon = None
         self.load_check_icon()
-        
+
     def load_check_icon(self):
-        """Загружает иконку check.svg"""
         try:
             current_file = os.path.abspath(__file__)
             project_root = os.path.dirname(os.path.dirname(current_file))
             icon_path = os.path.join(project_root, "src", "resources", "icons", "check.svg")
-            
-            if os.path.exists(icon_path):
-                renderer = QSvgRenderer(icon_path)
-                
-                if renderer.isValid():
-                    icon_size = 18
-                    pixmap = QPixmap(icon_size, icon_size)
-                    pixmap.fill(Qt.transparent)
-                    
-                    painter = QPainter(pixmap)
-                    renderer.render(painter)
-                    painter.end()
-                    
-                    self.check_icon = QIcon(pixmap)
+
+            if not os.path.exists(icon_path):
+                return
+
+            with open(icon_path, "rb") as f:
+                svg_bytes = f.read()
+
+            renderer = QSvgRenderer(svg_bytes)
+            if not renderer.isValid():
+                return
+
+            icon_size = 18
+            pixmap = QPixmap(icon_size, icon_size)
+            pixmap.fill(Qt.transparent)
+
+            painter = QPainter(pixmap)
+            renderer.render(painter)
+            painter.end()
+
+            # Перекрашиваем иконку в цвет текста текущей темы
+            tinted = QPixmap(pixmap.size())
+            tinted.fill(Qt.transparent)
+            p = QPainter(tinted)
+            p.drawPixmap(0, 0, pixmap)
+            p.setCompositionMode(QPainter.CompositionMode_SourceIn)
+            p.fillRect(tinted.rect(), QColor(ui_styles.get_colors()['text_color']))
+            p.end()
+
+            self.check_icon = QIcon(tinted)
         except Exception:
             self.check_icon = None
+
+    def changeEvent(self, event):
+        super().changeEvent(event)
+        if event.type() == QEvent.Type.StyleChange:
+            self.load_check_icon()
     
     def paintEvent(self, event):
         """Отрисовка с иконкой"""

@@ -9,7 +9,7 @@ from PySide6.QtCore import Qt, QDate
 from datetime import datetime
 from src.ui_styles import toggle_dark_mode
 from src.ui_widgets_checkbox import CustomCheckBox
-from src.updater import VERSION, PRERELEASE
+from src.core_updater import VERSION, PRERELEASE
 from src.utils_common import configure_debug_logging
 
 class SettingsArea(QWidget):

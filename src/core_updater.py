@@ -18,7 +18,6 @@ PRERELEASE = _PRERELEASE_LABELS.get(_pre.group().lower(), _pre.group().upper()) 
 
 
 def _ver(v: str) -> tuple:
-    # re.findall корректно разбирает суффиксы: "1.9.3a" → (1, 9, 3)
     return tuple(int(x) for x in re.findall(r'\d+', v))
 
 

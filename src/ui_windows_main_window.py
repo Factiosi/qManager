@@ -20,7 +20,7 @@ from src.ui_areas_settings import SettingsArea
 from src.ui_areas_playwright import PlaywrightArea
 from src.ui_widgets_console import LogConsole
 from src.ui_widgets_splitter import IconSplitter
-from src.updater import UpdateChecker, UpdateDownloader, PRERELEASE
+from src.core_updater import UpdateChecker, UpdateDownloader, PRERELEASE
 from src.utils_common import configure_debug_logging
 
 def get_resource_path(relative_path: str) -> str:

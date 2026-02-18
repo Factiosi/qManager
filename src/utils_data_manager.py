@@ -213,7 +213,7 @@ class DataManager:
     def load_sheets_data(self, credentials_file=None, spreadsheet_id=None, range_name=None, filter_mode='unlimited', filter_date_from=None, filter_date_to=None, log_callback=None):
         self.logger.info("Начало загрузки данных из Google Sheets")
         try:
-            from src.google_sheets_manager import GoogleSheetsManager
+            from src.utils_sheets_manager import GoogleSheetsManager
             
             if log_callback:
                 log_callback("Подключение к Google Sheets API...")
