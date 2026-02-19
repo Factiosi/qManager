@@ -57,7 +57,8 @@ class GoogleSheetsManager:
                 'sheets',
                 'v4',
                 http=auth_http,
-                cache_discovery=False
+                cache_discovery=False,
+                static_discovery=False
             )
             logger.info(f"Успешная аутентификация в Google Sheets API")
         except Exception as e:
